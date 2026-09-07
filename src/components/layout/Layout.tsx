@@ -47,7 +47,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
       )}>
         <div className="flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <AirfareXLogo size={32} animated={false} />
+            <AirfareXLogo size={32} animated={true} />
             <div className="flex flex-col">
               <span className="text-white font-semibold text-lg tracking-tight leading-none">AirFareX</span>
               <span className="text-[#718198] text-[10px] uppercase tracking-wider mt-1">MoSPI 26056</span>

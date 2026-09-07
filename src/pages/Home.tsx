@@ -48,7 +48,7 @@ export function Home() {
         </h1>
         
         <p className="mt-8 text-lg sm:text-xl text-[#A9B7C9] max-w-2xl leading-relaxed animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-          An automated economic data platform monitoring domestic airfare movements across major Indian corridors for the augmentation of the Consumer Price Index (CPI).
+          An automated economic data platform designed to monitor domestic airfare movements across major Indian air travel corridors for enhanced Consumer Price Index (CPI) analysis.
         </p>
         
         <div className="mt-10 flex flex-col sm:flex-row gap-4 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
