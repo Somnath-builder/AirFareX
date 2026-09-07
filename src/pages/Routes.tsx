@@ -34,27 +34,27 @@ export function Routes() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Routes Overview</h1>
-          <p className="text-slate-500 mt-1">Airfare movement across monitored domestic corridors</p>
+          <p className="text-[#718198] mt-1">Airfare movement across monitored domestic corridors</p>
         </div>
         <div className="flex gap-2">
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-[#A9B7C9]" />
             <input
               type="text"
               placeholder="Search routes..."
-              className="pl-9 pr-4 py-2 border border-slate-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-full sm:w-64"
+              className="pl-9 pr-4 py-2 border border-[#24344A] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-full sm:w-64"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 px-3 py-2 border border-slate-800 rounded-lg text-sm font-medium text-slate-300 hover:bg-black">
+          <button className="flex items-center gap-2 px-3 py-2 border border-[#24344A] rounded-lg text-sm font-medium text-[#F4F7FB] hover:bg-black">
             <SlidersHorizontal size={16} />
             <span className="hidden sm:inline">Filter</span>
           </button>
         </div>
       </div>
 
-      <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-[#101D30] border border-[#24344A] rounded-xl overflow-hidden shadow-sm">
         <DataTable 
           data={filteredRoutes}
           columns={[
@@ -72,7 +72,7 @@ export function Routes() {
             { 
               header: 'Avg Fare', 
               align: 'right', 
-              accessor: (row) => <span className="font-medium text-slate-200">₹{row.avgFare.toLocaleString('en-IN')}</span> 
+              accessor: (row) => <span className="font-medium text-white">₹{row.avgFare.toLocaleString('en-IN')}</span> 
             },
             { 
               header: 'Daily Change', 
@@ -95,7 +95,7 @@ export function Routes() {
               accessor: (row) => (
                 <button 
                   onClick={() => navigate(`/routes/${encodeURIComponent(row.route)}`)}
-                  className="text-sm text-slate-500 hover:text-indigo-600 font-medium"
+                  className="text-sm text-[#718198] hover:text-indigo-600 font-medium"
                 >
                   View details
                 </button>

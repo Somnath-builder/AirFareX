@@ -36,7 +36,7 @@ export function LeadTimeAnalysis() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight">Lead-Time Elasticity</h1>
-        <p className="text-slate-500 mt-1">How airfare changes as the departure date approaches</p>
+        <p className="text-[#718198] mt-1">How airfare changes as the departure date approaches</p>
       </div>
 
       <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 flex gap-3">
@@ -55,7 +55,7 @@ export function LeadTimeAnalysis() {
         subtitle="Across all monitored routes"
         action={
           <div className="flex gap-2">
-            <select className="text-sm border border-slate-800 rounded-md px-2 py-1 text-slate-600 outline-none">
+            <select className="text-sm border border-[#24344A] rounded-md px-2 py-1 text-slate-600 outline-none">
               <option>All Routes</option>
               <option>DEL → BOM</option>
               <option>DEL → BLR</option>

@@ -4,7 +4,7 @@ import { cn } from '../layout/Layout';
 
 export function Card({ children, className }: { children: React.ReactNode, className?: string }) {
   return (
-    <div className={cn("bg-slate-900/50 backdrop-blur-xl rounded-xl border border-slate-800 shadow-sm overflow-hidden", className)}>
+    <div className={cn("bg-[#101D30] rounded-xl border border-[#24344A] shadow-sm overflow-hidden", className)}>
       {children}
     </div>
   );
@@ -15,8 +15,8 @@ export function TrendIndicator({ value, suffix = '', inverse = false }: { value:
   const isNeutral = value === 0;
   
   // Inverse means lower is better (e.g. price dropping is good/green)
-  let colorClass = "text-slate-400";
-  let bgClass = "bg-slate-800/50";
+  let colorClass = "text-[#A9B7C9]";
+  let bgClass = "bg-[#14243A]";
   
   if (!isNeutral) {
     if (isPositive) {
@@ -60,14 +60,14 @@ export function KpiCard({
   return (
     <Card className="p-5">
       <div className="flex justify-between items-start mb-2">
-        <h3 className="text-sm font-medium text-slate-400">{title}</h3>
-        {Icon && <Icon size={18} className="text-indigo-400" />}
+        <h3 className="text-sm font-medium text-[#A9B7C9]">{title}</h3>
+        {Icon && <Icon size={18} className="text-[#4F46E5]" />}
       </div>
       <div className="flex items-baseline gap-2 mt-1">
         <div className="text-2xl font-semibold text-white">{value}</div>
       </div>
       {(trend !== undefined || trendLabel) && (
-        <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+        <div className="mt-3 flex items-center gap-2 text-sm text-[#718198]">
           {trend !== undefined && <TrendIndicator value={trend} suffix="%" inverse={inverseTrend} />}
           {trendLabel && <span>{trendLabel}</span>}
         </div>
@@ -79,10 +79,10 @@ export function KpiCard({
 export function ChartCard({ title, subtitle, children, action }: { title: string, subtitle?: string, children: React.ReactNode, action?: React.ReactNode }) {
   return (
     <Card className="flex flex-col">
-      <div className="p-5 border-b border-slate-800 flex justify-between items-center">
+      <div className="p-5 border-b border-[#24344A] flex justify-between items-center">
         <div>
           <h3 className="text-base font-semibold text-white">{title}</h3>
-          {subtitle && <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>}
+          {subtitle && <p className="text-sm text-[#A9B7C9] mt-0.5">{subtitle}</p>}
         </div>
         {action && <div>{action}</div>}
       </div>
@@ -100,7 +100,7 @@ export function StatusBadge({ status }: { status: string }) {
       "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border",
       isAvailable 
         ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
-        : "bg-slate-800/50 text-slate-400 border-slate-700"
+        : "bg-[#14243A] text-[#A9B7C9] border-[#24344A]"
     )}>
       <span className={cn("h-1.5 w-1.5 rounded-full", isAvailable ? "bg-emerald-500" : "bg-slate-400")} />
       {status}

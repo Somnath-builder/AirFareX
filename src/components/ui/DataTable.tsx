@@ -18,7 +18,7 @@ export function DataTable<T>({ data, columns, className }: DataTableProps<T>) {
   return (
     <div className={cn("w-full overflow-x-auto", className)}>
       <table className="w-full text-sm text-left">
-        <thead className="text-xs text-slate-400 bg-slate-900/50 uppercase border-b border-slate-800">
+        <thead className="text-xs text-[#A9B7C9] bg-[#0B1728] uppercase border-b border-[#24344A]">
           <tr>
             {columns.map((col, i) => (
               <th 
@@ -35,15 +35,15 @@ export function DataTable<T>({ data, columns, className }: DataTableProps<T>) {
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/50 bg-transparent">
+        <tbody className="divide-y divide-[#24344A] bg-transparent">
           {data.length > 0 ? (
             data.map((row, rowIndex) => (
-              <tr key={rowIndex} className="hover:bg-slate-800/30 transition-colors">
+              <tr key={rowIndex} className="hover:bg-[#14243A] transition-colors">
                 {columns.map((col, colIndex) => (
                   <td 
                     key={colIndex} 
                     className={cn(
-                      "px-4 py-3 whitespace-nowrap text-slate-300",
+                      "px-4 py-3 whitespace-nowrap text-[#F4F7FB]",
                       col.align === 'right' && "text-right",
                       col.align === 'center' && "text-center",
                       col.className
@@ -58,7 +58,7 @@ export function DataTable<T>({ data, columns, className }: DataTableProps<T>) {
             ))
           ) : (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-8 text-center text-slate-500">
+              <td colSpan={columns.length} className="px-4 py-8 text-center text-[#718198]">
                 No data available
               </td>
             </tr>

@@ -36,7 +36,7 @@ export function AirfareIndex() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight">Airfare Price Index Deep Dive</h1>
-        <p className="text-slate-500 mt-1">Understanding the construction and movement of the national airfare index</p>
+        <p className="text-[#718198] mt-1">Understanding the construction and movement of the national airfare index</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

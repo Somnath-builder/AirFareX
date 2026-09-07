@@ -58,13 +58,13 @@ export function RouteDetails() {
       <div className="flex items-center gap-4">
         <button 
           onClick={() => navigate('/routes')}
-          className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+          className="p-2 hover:bg-slate-100 rounded-full transition-colors text-[#718198]"
         >
           <ArrowLeft size={20} />
         </button>
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">{route.route}</h1>
-          <p className="text-slate-500 mt-1">Route detailed analytics and fare composition</p>
+          <p className="text-[#718198] mt-1">Route detailed analytics and fare composition</p>
         </div>
       </div>
 
@@ -154,8 +154,8 @@ export function RouteDetails() {
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute flex flex-col items-center">
-              <span className="text-sm text-slate-500">Total</span>
-              <span className="text-xl font-bold text-slate-200">₹{route.avgFare.toLocaleString('en-IN')}</span>
+              <span className="text-sm text-[#718198]">Total</span>
+              <span className="text-xl font-bold text-white">₹{route.avgFare.toLocaleString('en-IN')}</span>
             </div>
           </div>
           <div className="flex justify-center gap-4 mt-2">

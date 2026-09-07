@@ -38,7 +38,7 @@ export function Airlines() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight">Airline Analysis</h1>
-        <p className="text-slate-500 mt-1">Comparative pricing analysis across major Indian carriers</p>
+        <p className="text-[#718198] mt-1">Comparative pricing analysis across major Indian carriers</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -89,7 +89,7 @@ export function Airlines() {
             <DataTable 
               data={airlines}
               columns={[
-                { header: 'Airline', accessor: 'airline', className: 'font-medium text-slate-200' },
+                { header: 'Airline', accessor: 'airline', className: 'font-medium text-white' },
                 { header: 'Avg Fare', align: 'right', accessor: (row) => `₹${row.avgFare.toLocaleString('en-IN')}` },
                 { header: 'MoM Change', align: 'right', accessor: (row) => <TrendIndicator value={row.momChange} suffix="%" inverse /> },
                 { header: 'Routes', align: 'right', accessor: 'routesCount' },

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { AirfareXLogo } from '../ui/AirfareXLogo';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -41,15 +42,18 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
       
       {/* Sidebar container */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-300 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+        "fixed inset-y-0 left-0 z-50 w-64 bg-[#0B1728] border-r border-[#24344A] text-[#A9B7C9] transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="flex h-16 items-center justify-between px-4 bg-slate-950">
-          <div className="flex flex-col">
-            <span className="text-white font-semibold text-lg tracking-tight">AirFareX</span>
-            <span className="text-slate-500 text-xs uppercase tracking-wider">MoSPI 26056</span>
+        <div className="flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <AirfareXLogo size={32} animated={false} />
+            <div className="flex flex-col">
+              <span className="text-white font-semibold text-lg tracking-tight leading-none">AirFareX</span>
+              <span className="text-[#718198] text-[10px] uppercase tracking-wider mt-1">MoSPI 26056</span>
+            </div>
           </div>
-          <button className="lg:hidden text-slate-400 hover:text-white" onClick={() => setMobileOpen(false)}>
+          <button className="lg:hidden text-[#718198] hover:text-white" onClick={() => setMobileOpen(false)}>
             <X size={20} />
           </button>
         </div>
@@ -63,8 +67,8 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
               className={({ isActive }) => cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium",
                 isActive 
-                  ? "bg-indigo-600 text-white" 
-                  : "hover:bg-slate-800 hover:text-white"
+                  ? "bg-[#4F46E5] text-white" 
+                  : "hover:bg-[#14243A] hover:text-white"
               )}
             >
               <item.icon size={18} />
@@ -74,12 +78,12 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
         </nav>
 
         <div className="absolute bottom-4 left-4 right-4">
-          <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
-            <div className="flex items-center gap-2 text-indigo-400 mb-1">
+          <div className="bg-[#101D30] rounded-lg p-3 border border-[#24344A]">
+            <div className="flex items-center gap-2 text-[#4F46E5] mb-1">
               <Database size={14} />
               <span className="text-xs font-semibold uppercase tracking-wider">Environment</span>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-[#718198] leading-relaxed">
               DEMO / MOCK DATA
             </p>
           </div>
@@ -106,20 +110,20 @@ export function TopBar({ setMobileOpen }: { setMobileOpen: (v: boolean) => void 
   });
 
   return (
-    <header className="h-16 bg-slate-950 border-b border-slate-800 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
+    <header className="h-16 bg-[#0B1728] border-b border-[#24344A] flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
       <div className="flex items-center gap-4">
         <button 
-          className="lg:hidden text-slate-400 hover:text-white"
+          className="lg:hidden text-[#718198] hover:text-white"
           onClick={() => setMobileOpen(true)}
         >
           <Menu size={24} />
         </button>
         <h1 className="text-lg font-semibold text-white hidden sm:block">
-          AirFareX
+          Dashboard
         </h1>
       </div>
       
-      <div className="flex items-center gap-4 text-sm text-slate-400">
+      <div className="flex items-center gap-4 text-sm text-[#718198]">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -127,7 +131,7 @@ export function TopBar({ setMobileOpen }: { setMobileOpen: (v: boolean) => void 
           </span>
           <span className="hidden sm:inline text-emerald-400 font-medium">Live Data</span>
         </div>
-        <div className="h-4 w-px bg-slate-700"></div>
+        <div className="h-4 w-px bg-[#24344A]"></div>
         <span>{currentDate}</span>
       </div>
     </header>
@@ -138,7 +142,7 @@ export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-black overflow-hidden font-sans">
+    <div className="flex h-screen bg-[#07111F] overflow-hidden font-sans">
       <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar setMobileOpen={setMobileOpen} />
