@@ -63,7 +63,7 @@ export function RouteDetails() {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{route.route}</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{route.route}</h1>
           <p className="text-slate-500 mt-1">Route detailed analytics and fare composition</p>
         </div>
       </div>
@@ -155,7 +155,7 @@ export function RouteDetails() {
             </ResponsiveContainer>
             <div className="absolute flex flex-col items-center">
               <span className="text-sm text-slate-500">Total</span>
-              <span className="text-xl font-bold text-slate-800">₹{route.avgFare.toLocaleString('en-IN')}</span>
+              <span className="text-xl font-bold text-slate-200">₹{route.avgFare.toLocaleString('en-IN')}</span>
             </div>
           </div>
           <div className="flex justify-center gap-4 mt-2">

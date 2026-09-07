@@ -33,7 +33,7 @@ export function Routes() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Routes Overview</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Routes Overview</h1>
           <p className="text-slate-500 mt-1">Airfare movement across monitored domestic corridors</p>
         </div>
         <div className="flex gap-2">
@@ -42,19 +42,19 @@ export function Routes() {
             <input
               type="text"
               placeholder="Search routes..."
-              className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-full sm:w-64"
+              className="pl-9 pr-4 py-2 border border-slate-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-full sm:w-64"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
+          <button className="flex items-center gap-2 px-3 py-2 border border-slate-800 rounded-lg text-sm font-medium text-slate-300 hover:bg-black">
             <SlidersHorizontal size={16} />
             <span className="hidden sm:inline">Filter</span>
           </button>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
         <DataTable 
           data={filteredRoutes}
           columns={[
@@ -72,7 +72,7 @@ export function Routes() {
             { 
               header: 'Avg Fare', 
               align: 'right', 
-              accessor: (row) => <span className="font-medium text-slate-800">₹{row.avgFare.toLocaleString('en-IN')}</span> 
+              accessor: (row) => <span className="font-medium text-slate-200">₹{row.avgFare.toLocaleString('en-IN')}</span> 
             },
             { 
               header: 'Daily Change', 

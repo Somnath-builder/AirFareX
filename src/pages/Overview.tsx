@@ -45,7 +45,7 @@ export function Overview() {
     <div className="space-y-6">
       {/* Header section */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">India Airfare Price Index</h1>
+        <h1 className="text-2xl font-bold text-white tracking-tight">AirFareX</h1>
         <p className="text-slate-500 mt-1">Monitoring domestic airfare movements across major Indian city-pairs</p>
       </div>
 
@@ -89,9 +89,9 @@ export function Overview() {
         subtitle="Base Period = 100"
         action={
           <div className="flex bg-slate-100 p-1 rounded-md text-xs font-medium">
-            <button className="px-3 py-1 rounded text-slate-500 hover:text-slate-900">3M</button>
-            <button className="px-3 py-1 rounded bg-white text-slate-900 shadow-sm">6M</button>
-            <button className="px-3 py-1 rounded text-slate-500 hover:text-slate-900">1Y</button>
+            <button className="px-3 py-1 rounded text-slate-500 hover:text-white">3M</button>
+            <button className="px-3 py-1 rounded bg-slate-900/50 text-white shadow-sm">6M</button>
+            <button className="px-3 py-1 rounded text-slate-500 hover:text-white">1Y</button>
           </div>
         }
       >
@@ -152,7 +152,7 @@ export function Overview() {
                     accessor: (row) => (
                       <div className="flex items-center gap-2">
                         <Navigation size={14} className="text-slate-400 rotate-45" />
-                        <span className="font-medium text-slate-700">{row.route}</span>
+                        <span className="font-medium text-slate-300">{row.route}</span>
                       </div>
                     )
                   },
@@ -177,7 +177,7 @@ export function Overview() {
                 <div className="space-y-3">
                   {topIncreases.map(r => (
                     <div key={r.route} className="flex justify-between items-center text-sm">
-                      <span className="text-slate-700 font-medium">{r.route}</span>
+                      <span className="text-slate-300 font-medium">{r.route}</span>
                       <TrendIndicator value={r.monthlyChange} suffix="%" inverse />
                     </div>
                   ))}
@@ -192,7 +192,7 @@ export function Overview() {
                 <div className="space-y-3">
                   {topDecreases.map(r => (
                     <div key={r.route} className="flex justify-between items-center text-sm">
-                      <span className="text-slate-700 font-medium">{r.route}</span>
+                      <span className="text-slate-300 font-medium">{r.route}</span>
                       <TrendIndicator value={r.monthlyChange} suffix="%" inverse />
                     </div>
                   ))}

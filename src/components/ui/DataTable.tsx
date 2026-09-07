@@ -18,7 +18,7 @@ export function DataTable<T>({ data, columns, className }: DataTableProps<T>) {
   return (
     <div className={cn("w-full overflow-x-auto", className)}>
       <table className="w-full text-sm text-left">
-        <thead className="text-xs text-slate-500 bg-slate-50/80 uppercase border-b border-slate-200">
+        <thead className="text-xs text-slate-400 bg-slate-900/50 uppercase border-b border-slate-800">
           <tr>
             {columns.map((col, i) => (
               <th 
@@ -35,15 +35,15 @@ export function DataTable<T>({ data, columns, className }: DataTableProps<T>) {
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 bg-white">
+        <tbody className="divide-y divide-slate-800/50 bg-transparent">
           {data.length > 0 ? (
             data.map((row, rowIndex) => (
-              <tr key={rowIndex} className="hover:bg-slate-50/50 transition-colors">
+              <tr key={rowIndex} className="hover:bg-slate-800/30 transition-colors">
                 {columns.map((col, colIndex) => (
                   <td 
                     key={colIndex} 
                     className={cn(
-                      "px-4 py-3 whitespace-nowrap text-slate-700",
+                      "px-4 py-3 whitespace-nowrap text-slate-300",
                       col.align === 'right' && "text-right",
                       col.align === 'center' && "text-center",
                       col.className

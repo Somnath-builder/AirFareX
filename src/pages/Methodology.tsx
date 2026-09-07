@@ -5,12 +5,12 @@ export function Methodology() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">System Methodology</h1>
+        <h1 className="text-3xl font-bold text-white tracking-tight">System Methodology</h1>
         <p className="text-slate-500 mt-2 text-lg">Architecture and mathematical foundation of the India Airfare Price Index.</p>
       </div>
 
       <div className="prose prose-slate max-w-none">
-        <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2 pb-2 border-b border-slate-200 mt-8 mb-4">
+        <h2 className="text-xl font-semibold text-slate-200 flex items-center gap-2 pb-2 border-b border-slate-800 mt-8 mb-4">
           <Globe className="text-indigo-500" />
           1. Data Collection
         </h2>
@@ -19,12 +19,12 @@ export function Methodology() {
           The data is scraped without manual intervention at scheduled intervals to capture dynamic pricing strategies.
         </p>
 
-        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-2 mt-6">Route Basket</h3>
+        <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2 mt-6">Route Basket</h3>
         <p className="text-slate-600 leading-relaxed mb-4">
           A representative basket of city-pairs is selected based on DGCA passenger traffic data. This ensures the index accurately reflects the prices paid by the majority of domestic flyers.
         </p>
 
-        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-2 mt-6">Booking Windows</h3>
+        <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2 mt-6">Booking Windows</h3>
         <p className="text-slate-600 leading-relaxed mb-4">
           To account for lead-time elasticity, fares are sampled at specific intervals prior to departure:
         </p>
@@ -34,15 +34,15 @@ export function Methodology() {
           ))}
         </div>
 
-        <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2 pb-2 border-b border-slate-200 mt-10 mb-4">
+        <h2 className="text-xl font-semibold text-slate-200 flex items-center gap-2 pb-2 border-b border-slate-800 mt-10 mb-4">
           <Database className="text-indigo-500" />
           2. Data Processing Pipeline
         </h2>
-        <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 my-4">
+        <div className="bg-black rounded-xl p-6 border border-slate-800 my-4">
           <div className="flex flex-col gap-4">
             {['Raw Fare Collection', 'Validation & Cleansing', 'Deduplication', 'Outlier Detection', 'Fare Normalisation'].map((step, idx) => (
               <div key={idx} className="flex flex-col items-center">
-                <div className="w-full max-w-md bg-white border border-slate-200 p-3 rounded-lg text-center font-medium text-slate-700 shadow-sm">
+                <div className="w-full max-w-md bg-slate-900/50 border border-slate-800 p-3 rounded-lg text-center font-medium text-slate-300 shadow-sm">
                   {step}
                 </div>
                 {idx < 4 && <div className="h-6 w-px bg-slate-300 my-1"></div>}
@@ -51,7 +51,7 @@ export function Methodology() {
           </div>
         </div>
 
-        <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2 pb-2 border-b border-slate-200 mt-10 mb-4">
+        <h2 className="text-xl font-semibold text-slate-200 flex items-center gap-2 pb-2 border-b border-slate-800 mt-10 mb-4">
           <LineChart className="text-indigo-500" />
           3. Index Construction
         </h2>
@@ -75,7 +75,7 @@ export function Methodology() {
           </code>
         </div>
 
-        <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2 pb-2 border-b border-slate-200 mt-10 mb-4">
+        <h2 className="text-xl font-semibold text-slate-200 flex items-center gap-2 pb-2 border-b border-slate-800 mt-10 mb-4">
           <Server className="text-indigo-500" />
           4. Future API Specification
         </h2>
@@ -96,7 +96,7 @@ export function Methodology() {
               <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
                 {api.method}
               </span>
-              <code className="text-sm text-slate-700">{api.endpoint}</code>
+              <code className="text-sm text-slate-300">{api.endpoint}</code>
             </Card>
           ))}
         </div>
