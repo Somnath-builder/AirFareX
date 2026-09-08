@@ -1,0 +1,19 @@
+# Python environments
+.venv/
+venv/
+env/
+.env
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data & Configs (Optional based on your needs)
+*.csv
+*.xlsx
+*.zip
+!dgca_routes.csv
+
+# VSCode
+.vscode/
