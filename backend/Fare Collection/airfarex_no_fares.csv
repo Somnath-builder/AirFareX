@@ -1,0 +1,7 @@
+source,origin,destination,travel_date,status,reason,collected_at
+SerpApi Google Flights,AGX,GOX,2026-09-08,NO_FARE_FOUND,Google Flights returned no valid fare observations.,2026-09-07T17:01:27.580896+05:30
+SerpApi Google Flights,AJL,SHL,2026-09-08,API_ERROR,Google Flights hasn't returned any results for this query.,2026-09-07T17:01:29.692823+05:30
+SerpApi Google Flights,AMD,HSS,2026-09-08,API_ERROR,Google Flights hasn't returned any results for this query.,2026-09-07T17:01:42.129576+05:30
+SerpApi Google Flights,AMD,IXK,2026-09-08,NO_FARE_FOUND,Google Flights returned no valid fare observations.,2026-09-07T17:01:44.214550+05:30
+Google Flights via SerpApi,AGX,GOX,2026-09-08,NO_FARE_FOUND,Google Flights returned no fare observations.,2026-09-07T17:40:37.590453+00:00
+Google Flights via SerpApi,BLR,SDW,2026-09-08,NO_FARE_FOUND,Google Flights returned no fare observations.,2026-09-07T17:48:06.558002+00:00
