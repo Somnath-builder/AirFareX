@@ -37,6 +37,7 @@ import time
 import hashlib
 import shutil
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 import pandas as pd
@@ -90,6 +91,10 @@ RESUME_MODE = True
 #
 # Use this mode for daily historical price-index collection.
 HISTORICAL_COLLECTION_MODE = True
+
+# Daily historical collection is tracked in India Standard Time.
+# A route/date job is collected at most once per local calendar day.
+LOCAL_TIMEZONE = ZoneInfo("Asia/Kolkata")
 
 # Wait between SerpApi requests.
 REQUEST_DELAY_SECONDS = 3
@@ -1071,29 +1076,22 @@ def load_queue():
 
 def load_checkpoint():
     """
-    Load completed searches from checkpoint.
+    Load all successfully completed route/date searches.
 
     Only searches marked as FARES_FOUND or NO_FARE_FOUND
     are considered completed.
     """
 
     if not CHECKPOINT_FILE.exists():
-
         return set()
 
     try:
-
-        df = pd.read_csv(
-            CHECKPOINT_FILE
-        )
-
+        df = pd.read_csv(CHECKPOINT_FILE)
     except Exception as error:
-
         print(
             "Warning: could not read checkpoint:",
             error
         )
-
         return set()
 
     required = [
@@ -1103,24 +1101,14 @@ def load_checkpoint():
         "status"
     ]
 
-    if not all(
-        column in df.columns
-        for column in required
-    ):
-
-        print(
-            "Warning: checkpoint schema invalid."
-        )
-
+    if not all(column in df.columns for column in required):
+        print("Warning: checkpoint schema invalid.")
         return set()
 
     completed = set()
 
     for _, row in df.iterrows():
-
-        status = clean_text(
-            row["status"]
-        )
+        status = clean_text(row["status"])
 
         if status not in {
             "FARES_FOUND",
@@ -1137,6 +1125,86 @@ def load_checkpoint():
         completed.add(key)
 
     return completed
+
+
+def get_checkpoint_completed_today():
+    """
+    Return route/date jobs successfully completed during the
+    current India local calendar day.
+
+    This is the key protection for historical collection:
+    - Yesterday's observations remain historical data.
+    - Today's route/date jobs are not collected repeatedly.
+    - Failed/retryable searches are not treated as completed.
+    """
+
+    if not CHECKPOINT_FILE.exists():
+        return set()
+
+    try:
+        df = pd.read_csv(CHECKPOINT_FILE)
+    except Exception as error:
+        print(
+            "Warning: could not read checkpoint for today's "
+            "collection check:",
+            error
+        )
+        return set()
+
+    required = [
+        "origin",
+        "destination",
+        "travel_date",
+        "status",
+        "collected_at",
+    ]
+
+    if not all(column in df.columns for column in required):
+        return set()
+
+    today = datetime.now(LOCAL_TIMEZONE).date()
+    completed_today = set()
+
+    for _, row in df.iterrows():
+        status = clean_text(row["status"])
+
+        if status not in {
+            "FARES_FOUND",
+            "NO_FARE_FOUND"
+        }:
+            continue
+
+        timestamp = clean_text(row["collected_at"])
+
+        try:
+            dt = pd.to_datetime(
+                timestamp,
+                utc=True,
+                errors="coerce"
+            )
+
+            if pd.isna(dt):
+                continue
+
+            local_date = dt.to_pydatetime().astimezone(
+                LOCAL_TIMEZONE
+            ).date()
+
+        except Exception:
+            continue
+
+        if local_date != today:
+            continue
+
+        key = (
+            clean_text(row["origin"]).upper(),
+            clean_text(row["destination"]).upper(),
+            normalize_date(row["travel_date"])
+        )
+
+        completed_today.add(key)
+
+    return completed_today
 
 
 def append_checkpoint(
@@ -1723,6 +1791,13 @@ def main():
     print(RESUME_MODE)
 
     print()
+    print("Historical collection mode:")
+    print(HISTORICAL_COLLECTION_MODE)
+
+    if HISTORICAL_COLLECTION_MODE:
+        print("Historical timezone: Asia/Kolkata")
+
+    print()
 
     # --------------------------------------------------------
     # Environment
@@ -1783,7 +1858,6 @@ def main():
         completed = set()
 
         if RESUME_MODE:
-
             completed = load_checkpoint()
 
             print(
@@ -1792,10 +1866,19 @@ def main():
                 f"route/date searches."
             )
 
+        completed_today = set()
+
         if HISTORICAL_COLLECTION_MODE:
+            completed_today = get_checkpoint_completed_today()
+
             print(
-                "Historical mode is ON: previously completed "
-                "route/date jobs will be collected again."
+                "Historical mode is ON: the same route/date basket "
+                "can be recollected on a new day."
+            )
+
+            print(
+                f"Completed today (IST): "
+                f"{len(completed_today)} route/date searches."
             )
 
         # ----------------------------------------------------
@@ -1812,20 +1895,24 @@ def main():
                 normalize_date(row["travel_date"])
             )
 
-            # In normal resume mode, completed route/date jobs are skipped.
-            # In historical mode, allow the same basket to be collected again
-            # on a later collection day so the price index gets a new period.
-            if (
-                RESUME_MODE
-                and not HISTORICAL_COLLECTION_MODE
-                and key in completed
-            ):
+            # Normal mode:
+            #   Never repeat a successfully completed route/date.
+            #
+            # Historical mode:
+            #   Repeat yesterday's completed route/date jobs,
+            #   but never repeat a job already completed today.
+            #
+            # Retryable failures are NOT in the checkpoint and therefore
+            # remain eligible for another attempt.
 
-                continue
+            if RESUME_MODE:
+                if HISTORICAL_COLLECTION_MODE:
+                    if key in completed_today:
+                        continue
+                elif key in completed:
+                    continue
 
-            remaining_rows.append(
-                row
-            )
+            remaining_rows.append(row)
 
         remaining_count = len(
             remaining_rows
