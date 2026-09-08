@@ -31,33 +31,35 @@ To run the full stack application, you need to start both the Python Backend and
 The backend handles database queries, data aggregation, and serves the API endpoints.
 
 1. Open a terminal and navigate to the backend directory:
-   ``bash
+   `ash
    cd AirFareX/backend
-   ``
+   `
 
 2. Ensure your .env file is present in the ackend/ directory with your MongoDB Atlas and SerpApi keys:
-   ``env
+   `env
    MONGODB_URI=your_mongodb_connection_string
    SERPAPI_KEY=your_serpapi_key
-   ``
+   `
 
-3. Activate your Python virtual environment (if you are using one):
-   ``bash
+3. Create and activate your Python virtual environment (if you haven't already):
+   `ash
    # On Windows:
+   python -m venv .venv
    .venv\Scripts\activate
    # On Mac/Linux:
+   python3 -m venv .venv
    source .venv/bin/activate
-   ``
+   `
 
-4. Install the required Python dependencies:
-   ``bash
-   pip install -r requirements.txt
-   ``
+4. Install the required Python dependencies (Note: The requirements file is inside the inner Backend/ folder):
+   `ash
+   pip install -r Backend\requirements.txt
+   `
 
 5. Start the FastAPI server using Uvicorn:
-   ``bash
+   `ash
    python -m uvicorn Backend.main:app --reload
-   ``
+   `
    *The backend will now be running at http://127.0.0.1:8000*
 
 ### 2. Start the Frontend (React / Vite)
@@ -65,19 +67,19 @@ The backend handles database queries, data aggregation, and serves the API endpo
 The frontend serves the interactive data dashboard and connects to the backend API.
 
 1. Open a **second** terminal window and navigate to the frontend directory:
-   ``bash
+   `ash
    cd AirFareX/frontend
-   ``
+   `
 
 2. Install the Node.js dependencies:
-   ``bash
+   `ash
    npm install
-   ``
+   `
 
 3. Start the Vite development server:
-   ``bash
+   `ash
    npm run dev
-   ``
+   `
 
 4. **View the App**: Open your browser and navigate to http://localhost:5173.
 
