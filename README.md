@@ -1,82 +1,90 @@
-# AirfareX - Real-time Airfare Price Index for India
+﻿# AirFareX - Real-time Airfare Price Index for India
 
-![AirfareX Dashboard preview (placeholder)](https://via.placeholder.com/1200x600/07111F/FFFFFF?text=AirfareX+Dashboard)
+**AirFareX** is a sophisticated, full-stack data platform developed for **MoSPI Hackathon Problem Statement 26056**. It serves as an automated economic data platform designed to scrape, monitor, and analyze domestic airfare movements across major Indian corridors, ultimately supporting the augmentation of the Consumer Price Index (CPI).
 
-**AirfareX** is a sophisticated, data-driven frontend application developed for **MoSPI Hackathon Problem Statement 26056**. It serves as an automated economic data platform designed to monitor and analyze domestic airfare movements across major Indian corridors, ultimately supporting the augmentation of the Consumer Price Index (CPI).
-
-## ✈️ Overview
+## 📊 Overview
 
 The platform provides government analysts and economic researchers with a comprehensive suite of tools to track aviation economics in real-time. 
 
 ### Key Features
-- **Airfare Index Dashboard**: High-level KPI tracking (Current Index, Monthly Change, Active Routes).
+- **Data Scraping Queue**: Automated Python background jobs to scrape Google Flights (SerpApi) and store time-series fare data into MongoDB Atlas.
+- **Airfare Index Dashboard**: High-level KPI tracking (Current Index, Observation Counts, Live Fares).
 - **Interactive Routes Map**: Visualizes price movements across critical domestic air corridors.
-- **Lead Time Analysis**: Tracks how prices fluctuate as the departure date approaches.
 - **Airlines Breakdown**: Comparative analysis of pricing strategies across different domestic carriers.
 - **Deep Navy Aesthetic**: A bespoke "Government Analytics + Aviation Tech" dark mode theme designed for prolonged, fatigue-free data analysis.
-- **Custom Orbital SVG Logo**: A mathematically precise, animated 3D SVG logo featuring a commercial jet orbiting a static 'A' with a tricolour (Saffron, White, Green) swoosh representing the Indian flag.
 
-## 🛠 Tech Stack
+## 💻 Tech Stack
 
-- **Framework**: React 18
-- **Build Tool**: Vite
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS v4 (Custom Deep Navy color system)
-- **Icons**: Lucide React
-- **Routing**: React Router DOM
+- **Frontend**: React 18, Vite, Tailwind CSS v4, Recharts, Lucide React
+- **Backend**: Python, FastAPI, Uvicorn
+- **Database**: MongoDB Atlas (Cloud)
+- **Scraping**: SerpApi (Google Flights API)
 
-## 🚀 Getting Started
+---
 
-### Prerequisites
-Make sure you have Node.js (v18+) installed on your machine.
+## 🚀 How to Run the Project Locally
 
-### Installation
+To run the full stack application, you need to start both the Python Backend and the React Frontend in two separate terminal windows.
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd AirfareX
-   ```
+### 1. Start the Backend (FastAPI)
 
-2. Install dependencies:
-   ```bash
+The backend handles database queries, data aggregation, and serves the API endpoints.
+
+1. Open a terminal and navigate to the backend directory:
+   ``bash
+   cd AirFareX/backend
+   ``
+
+2. Ensure your .env file is present in the ackend/ directory with your MongoDB Atlas and SerpApi keys:
+   ``env
+   MONGODB_URI=your_mongodb_connection_string
+   SERPAPI_KEY=your_serpapi_key
+   ``
+
+3. Activate your Python virtual environment (if you are using one):
+   ``bash
+   # On Windows:
+   .venv\Scripts\activate
+   # On Mac/Linux:
+   source .venv/bin/activate
+   ``
+
+4. Install the required Python dependencies:
+   ``bash
+   pip install -r requirements.txt
+   ``
+
+5. Start the FastAPI server using Uvicorn:
+   ``bash
+   python -m uvicorn Backend.main:app --reload
+   ``
+   *The backend will now be running at http://127.0.0.1:8000*
+
+### 2. Start the Frontend (React / Vite)
+
+The frontend serves the interactive data dashboard and connects to the backend API.
+
+1. Open a **second** terminal window and navigate to the frontend directory:
+   ``bash
+   cd AirFareX/frontend
+   ``
+
+2. Install the Node.js dependencies:
+   ``bash
    npm install
-   ```
+   ``
 
-3. Start the development server:
-   ```bash
+3. Start the Vite development server:
+   ``bash
    npm run dev
-   ```
+   ``
 
-4. Open your browser and navigate to `http://localhost:5173`.
+4. **View the App**: Open your browser and navigate to http://localhost:5173.
 
-## 🎨 Design System
+---
 
-AirfareX uses a heavily customized CSS variable system configured in `src/index.css` to achieve its distinctive Deep Navy look:
-- **Backgrounds**: `#07111F` (Deepest Navy)
-- **Secondary / Navbars**: `#0B1728`
-- **Surfaces / Cards**: `#101D30` (Elevated) and `#14243A` (Hover States)
-- **Borders**: `#24344A` (Cool Slate/Blue)
-- **Accents**: Indigo (`#4F46E5`), Emerald (`#10B981`) for positive trends, Rose (`#F43F5E`) for negative trends.
-
-## 🧩 Project Structure
-
-```
-src/
-├── components/
-│   ├── layout/        # Sidebar, TopBar, and Main Layout wrappers
-│   └── ui/            # Reusable UI components (Cards, DataTable, AirfareXLogo)
-├── pages/             # Page components (Home, Dashboard Overview, Routes, etc.)
-├── index.css          # Tailwind configurations and Deep Navy CSS variables
-└── main.tsx           # Application entry point
-```
-
-## 📜 Problem Statement Context
+## 🏛️ Problem Statement Context
 **MoSPI (Ministry of Statistics and Programme Implementation)**  
 *Problem Statement 26056: Development of a Real-time Airfare Price Index for India.*
 
-Currently, the application runs on a mock data environment specifically tailored to demonstrate the frontend architecture, UI/UX, and data visualization capabilities required for the MoSPI hackathon submission.
-
----
-*Built with ❤️ for India's economic intelligence infrastructure.*
-
+*Built with 💙 for India's economic intelligence infrastructure.*
