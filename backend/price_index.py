@@ -1,657 +1,739 @@
 """
-AirFareX - Airfare Price Index Engine
+AirFareX - Robust Airfare Price Index Engine
 
-Purpose:
-    Calculate a route-level and overall airfare price index
-    from fare observations stored in MongoDB.
-
-Base period:
-    The earliest collection date in MongoDB is automatically
-    used as the base period and assigned an index of 100.
+Methodology:
+1. Uses fare collection date as the index time period.
+2. Builds a consistent basket at route + travel-date level.
+3. Uses the median fare for each basket item within each collection period.
+4. Compares only basket items available in BOTH the base and current period.
+5. Calculates route-level prices from comparable basket items.
+6. Uses a fixed-base index with base period = 100.
+7. Uses explicit route weights when backend/Data/route_weights.csv exists.
+8. Otherwise derives a transparent DGCA schedule-frequency weighting proxy.
+9. Stores route-level and overall index observations in MongoDB.
 
 Important:
-    The current dataset contains observations from only one
-    collection date, so the current overall index will be 100.
-    When future collection runs create additional periods,
-    the same script will automatically calculate price movement.
+This is a prototype airfare index methodology for AirFareX.
+It is NOT an official MoSPI CPI calculation.
+Schedule frequency is only a proxy for route importance unless official
+passenger-volume weights are supplied.
 """
 
+from __future__ import annotations
+
 import os
+import re
 from collections import defaultdict
 from datetime import datetime, timezone
+from pathlib import Path
+from statistics import median
+from typing import Dict, List, Tuple
 
+import pandas as pd
 from dotenv import load_dotenv
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING
 from pymongo.server_api import ServerApi
 
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
+# ---------------------------------------------------------------------
+# PATHS / CONFIGURATION
+# ---------------------------------------------------------------------
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "Data"
+DGCA_DIR = BASE_DIR / "DGCA"
 
-MONGODB_URI = os.getenv("MONGODB_URI")
+FARE_FILE = DATA_DIR / "fare_observations.csv"
+ROUTE_WEIGHTS_FILE = DATA_DIR / "route_weights.csv"
+DGCA_ROUTES_FILE = DGCA_DIR / "dgca_routes.csv"
 
-if not MONGODB_URI:
-    raise ValueError("MONGODB_URI not found in .env")
-
-DATABASE_NAME = "AirFareX"
+DB_NAME = "AirFareX"
 FARE_COLLECTION = "fare_observations"
 INDEX_COLLECTION = "price_index"
 
-BASE_INDEX = 100.0
+load_dotenv(BASE_DIR / ".env")
 
 
-# ============================================================
-# MONGODB CONNECTION
-# ============================================================
+# ---------------------------------------------------------------------
+# MONGODB
+# ---------------------------------------------------------------------
 
-def connect_mongodb():
-    """Connect to MongoDB Atlas."""
+def get_mongo_database():
+    uri = os.getenv("MONGODB_URI")
+    if not uri:
+        raise ValueError("MONGODB_URI not found in backend/.env")
 
-    client = MongoClient(
-        MONGODB_URI,
-        server_api=ServerApi("1")
-    )
-
+    client = MongoClient(uri, server_api=ServerApi("1"))
     client.admin.command("ping")
-
-    print("======================================")
-    print("MongoDB connection successful!")
-    print("======================================")
-    print("Database:", DATABASE_NAME)
-
-    return client
+    return client[DB_NAME]
 
 
-# ============================================================
-# DATE PARSING
-# ============================================================
+# ---------------------------------------------------------------------
+# HELPERS
+# ---------------------------------------------------------------------
 
-def parse_collection_date(value):
-    """
-    Convert collected_at into YYYY-MM-DD.
+def normalize_route(origin: str, destination: str) -> str:
+    return f"{str(origin).strip().upper()}-{str(destination).strip().upper()}"
 
-    Handles:
-        2026-09-07T16:25:14.204552+05:30
-        datetime objects
-        ISO strings
-    """
 
-    if value is None:
+def parse_collection_period(value) -> str | None:
+    if pd.isna(value):
         return None
 
-    if isinstance(value, datetime):
-        return value.date().isoformat()
+    text = str(value).strip()
 
-    if isinstance(value, str):
-        try:
-            return datetime.fromisoformat(
-                value.replace("Z", "+00:00")
-            ).date().isoformat()
-        except ValueError:
-            return value[:10]
+    # ISO timestamps and normal datetime strings
+    try:
+        dt = pd.to_datetime(text, errors="coerce")
+        if not pd.isna(dt):
+            return dt.strftime("%Y-%m-%d")
+    except Exception:
+        pass
+
+    match = re.search(r"(\d{4})[-/](\d{1,2})[-/](\d{1,2})", text)
+    if match:
+        y, m, d = match.groups()
+        return f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
 
     return None
 
 
-# ============================================================
+def clean_fare(value) -> float | None:
+    if value is None or pd.isna(value):
+        return None
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).replace(",", "").replace("₹", "").strip()
+
+    match = re.search(r"\d+(?:\.\d+)?", text)
+    if not match:
+        return None
+
+    return float(match.group())
+
+
+def find_column(df: pd.DataFrame, candidates: List[str]) -> str | None:
+    normalized = {str(c).strip().lower(): c for c in df.columns}
+
+    for candidate in candidates:
+        if candidate.lower() in normalized:
+            return normalized[candidate.lower()]
+
+    for column in df.columns:
+        c = str(column).strip().lower()
+        for candidate in candidates:
+            if candidate.lower() in c:
+                return column
+
+    return None
+
+
+# ---------------------------------------------------------------------
 # LOAD FARE OBSERVATIONS
-# ============================================================
+# ---------------------------------------------------------------------
 
-def load_fare_observations(collection):
+def load_fare_observations(db) -> pd.DataFrame:
     """
-    Load valid fare observations.
+    MongoDB is the primary source of truth.
 
-    Only observations containing:
-        origin
-        destination
-        fare_amount
-        collected_at
-
-    are used.
+    CSV is used only as a fallback if MongoDB contains no observations.
     """
 
-    query = {
-        "origin": {"$exists": True, "$ne": None},
-        "destination": {"$exists": True, "$ne": None},
-        "fare_amount": {"$exists": True, "$gt": 0},
-        "collected_at": {"$exists": True, "$ne": None},
-    }
+    collection = db[FARE_COLLECTION]
 
-    projection = {
-        "_id": 0,
-        "origin": 1,
-        "destination": 1,
-        "fare_amount": 1,
-        "collected_at": 1,
-        "airline": 1,
-        "travel_date": 1,
-    }
-
-    observations = list(
-        collection.find(query, projection)
+    documents = list(
+        collection.find(
+            {},
+            {
+                "_id": 0,
+                "origin": 1,
+                "destination": 1,
+                "travel_date": 1,
+                "fare_amount": 1,
+                "collected_at": 1,
+                "airline": 1,
+            },
+        )
     )
 
-    print()
-    print("Fare observations loaded:", len(observations))
-
-    return observations
-
-
-# ============================================================
-# CALCULATE ROUTE PERIOD AVERAGES
-# ============================================================
-
-def calculate_route_period_averages(observations):
-    """
-    Calculate:
-
-        route + collection period
-                    ↓
-             average fare
-
-    Example:
-
-        AMD-BOM | 2026-09-07 | ₹9544.12
-    """
-
-    grouped = defaultdict(list)
-
-    for obs in observations:
-
-        origin = str(obs.get("origin", "")).strip().upper()
-        destination = str(
-            obs.get("destination", "")
-        ).strip().upper()
-
-        fare = obs.get("fare_amount")
-
-        period = parse_collection_date(
-            obs.get("collected_at")
+    if documents:
+        df = pd.DataFrame(documents)
+        print(f"Fare observations loaded from MongoDB: {len(df)}")
+    elif FARE_FILE.exists():
+        df = pd.read_csv(FARE_FILE)
+        print(f"Fare observations loaded from CSV fallback: {len(df)}")
+    else:
+        raise FileNotFoundError(
+            "No fare observations found in MongoDB and no CSV fallback exists."
         )
+
+    required = ["origin", "destination", "travel_date", "fare_amount", "collected_at"]
+
+    missing = [column for column in required if column not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required fare observation columns: {missing}")
+
+    df["origin"] = df["origin"].astype(str).str.strip().str.upper()
+    df["destination"] = df["destination"].astype(str).str.strip().str.upper()
+    df["route"] = df.apply(
+        lambda row: normalize_route(row["origin"], row["destination"]),
+        axis=1,
+    )
+
+    df["travel_date"] = pd.to_datetime(
+        df["travel_date"], errors="coerce"
+    ).dt.strftime("%Y-%m-%d")
+
+    df["collection_period"] = df["collected_at"].apply(parse_collection_period)
+    df["fare"] = df["fare_amount"].apply(clean_fare)
+
+    df = df.dropna(
+        subset=["route", "travel_date", "collection_period", "fare"]
+    )
+
+    df = df[df["fare"] > 0].copy()
+
+    return df
+
+
+# ---------------------------------------------------------------------
+# BUILD CONSISTENT BASKET
+# ---------------------------------------------------------------------
+
+def build_basket_periods(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Each basket item is:
+
+        route + travel_date
+
+    For every collection period, its representative fare is the
+    median of all offers observed for that basket item.
+
+    This prevents one route with many duplicate airline offers from
+    dominating the index and makes the comparison between periods
+    more stable than averaging every individual fare.
+    """
+
+    grouped = (
+        df.groupby(
+            ["route", "travel_date", "collection_period"],
+            as_index=False,
+        )["fare"]
+        .median()
+        .rename(columns={"fare": "basket_median_fare"})
+    )
+
+    return grouped
+
+
+def make_comparable_period(
+    basket: pd.DataFrame,
+    base_period: str,
+    current_period: str,
+) -> pd.DataFrame:
+    """
+    Keep only route/travel-date basket items that exist in both
+    base and current collection periods.
+    """
+
+    base = basket[
+        basket["collection_period"] == base_period
+    ][["route", "travel_date", "basket_median_fare"]].rename(
+        columns={"basket_median_fare": "base_fare"}
+    )
+
+    current = basket[
+        basket["collection_period"] == current_period
+    ][["route", "travel_date", "basket_median_fare"]].rename(
+        columns={"basket_median_fare": "current_fare"}
+    )
+
+    comparable = base.merge(
+        current,
+        on=["route", "travel_date"],
+        how="inner",
+    )
+
+    comparable = comparable[
+        (comparable["base_fare"] > 0)
+        & (comparable["current_fare"] > 0)
+    ].copy()
+
+    return comparable
+
+
+# ---------------------------------------------------------------------
+# ROUTE WEIGHTS
+# ---------------------------------------------------------------------
+
+def load_explicit_route_weights() -> Dict[str, float]:
+    """
+    Preferred weighting source.
+
+    Expected file:
+        backend/Data/route_weights.csv
+
+    Columns:
+        route,weight
+    """
+
+    if not ROUTE_WEIGHTS_FILE.exists():
+        return {}
+
+    weights_df = pd.read_csv(ROUTE_WEIGHTS_FILE)
+
+    if "route" not in weights_df.columns or "weight" not in weights_df.columns:
+        raise ValueError(
+            "route_weights.csv must contain columns: route, weight"
+        )
+
+    weights: Dict[str, float] = {}
+
+    for _, row in weights_df.iterrows():
+        route = normalize_route(
+            str(row["route"]).split("-")[0],
+            str(row["route"]).split("-")[-1],
+        )
+
+        try:
+            weight = float(row["weight"])
+        except (TypeError, ValueError):
+            continue
+
+        if weight > 0:
+            weights[route] = weight
+
+    return weights
+
+
+def load_dgca_frequency_weights() -> Dict[str, float]:
+    """
+    Transparent proxy weighting based on DGCA schedule frequency.
+
+    This is NOT passenger-volume weighting.
+
+    Expected DGCA file:
+        backend/DGCA/dgca_routes.csv
+
+    The route frequency is summed across schedule records.
+    """
+
+    if not DGCA_ROUTES_FILE.exists():
+        return {}
+
+    df = pd.read_csv(DGCA_ROUTES_FILE)
+
+    origin_col = find_column(df, ["origin"])
+    destination_col = find_column(df, ["destination"])
+    frequency_col = find_column(df, ["frequency"])
+
+    if not origin_col or not destination_col or not frequency_col:
+        print(
+            "DGCA route file does not contain the expected "
+            "origin/destination/frequency columns."
+        )
+        return {}
+
+    weights: Dict[str, float] = defaultdict(float)
+
+    for _, row in df.iterrows():
+        origin = str(row[origin_col]).strip().upper()
+        destination = str(row[destination_col]).strip().upper()
 
         if not origin or not destination:
             continue
 
-        if period is None:
+        frequency_text = str(row[frequency_col]).strip()
+
+        # Frequency may contain values such as 1234567.
+        digits = [int(x) for x in frequency_text if x.isdigit() and x != "0"]
+
+        if not digits:
             continue
 
-        try:
-            fare = float(fare)
-        except (TypeError, ValueError):
-            continue
+        # Count operating weekdays rather than interpreting 1234567 as
+        # the number 1,234,567.
+        operating_days = len(set(digits))
 
-        if fare <= 0:
-            continue
+        route = normalize_route(origin, destination)
+        weights[route] += operating_days
 
-        route = f"{origin}-{destination}"
+    return dict(weights)
 
-        grouped[(route, period)].append(fare)
 
-    route_periods = []
+def get_route_weights(routes: List[str]) -> Tuple[Dict[str, float], str]:
+    explicit = load_explicit_route_weights()
 
-    for (route, period), fares in grouped.items():
+    if explicit:
+        usable = {
+            route: explicit[route]
+            for route in routes
+            if route in explicit and explicit[route] > 0
+        }
 
-        average_fare = sum(fares) / len(fares)
+        if usable:
+            return usable, "explicit route weights from route_weights.csv"
 
-        route_periods.append({
-            "route": route,
-            "period": period,
-            "average_fare": round(average_fare, 2),
-            "observation_count": len(fares),
-        })
+    dgca = load_dgca_frequency_weights()
 
-    route_periods.sort(
-        key=lambda x: (
-            x["period"],
-            x["route"]
-        )
+    if dgca:
+        usable = {
+            route: dgca[route]
+            for route in routes
+            if route in dgca and dgca[route] > 0
+        }
+
+        if usable:
+            return usable, "DGCA schedule-frequency proxy"
+
+    return (
+        {route: 1.0 for route in routes},
+        "equal route weighting fallback",
     )
 
-    return route_periods
 
+# ---------------------------------------------------------------------
+# INDEX CALCULATION
+# ---------------------------------------------------------------------
 
-# ============================================================
-# CALCULATE PRICE INDEX
-# ============================================================
-
-def calculate_price_index(route_periods):
-    """
-    Calculate route-level price indices.
-
-    Formula:
-
-        Index =
-            Current average fare
-            --------------------
-            Base-period average fare
-            × 100
-
-    The earliest collection period is the base period.
-    """
-
-    if not route_periods:
-        return [], None
-
+def calculate_index(
+    basket: pd.DataFrame,
+) -> Tuple[pd.DataFrame, pd.DataFrame, str]:
     periods = sorted(
-        set(item["period"] for item in route_periods)
+        basket["collection_period"].dropna().unique().tolist()
     )
+
+    if not periods:
+        raise ValueError("No collection periods found.")
 
     base_period = periods[0]
 
-    print()
-    print("Base period:", base_period)
-    print("Base index:", BASE_INDEX)
+    route_records = []
 
-    # --------------------------------------------------------
-    # Store base-period route fares
-    # --------------------------------------------------------
-
-    base_fares = {}
-
-    for item in route_periods:
-
-        if item["period"] == base_period:
-
-            base_fares[item["route"]] = (
-                item["average_fare"]
-            )
-
-    results = []
-
-    for item in route_periods:
-
-        route = item["route"]
-        period = item["period"]
-        current_fare = item["average_fare"]
-
-        base_fare = base_fares.get(route)
-
-        # A route must exist in the base period
-        # to calculate a comparable index.
-        if base_fare is None or base_fare <= 0:
-            continue
-
-        index_value = (
-            current_fare / base_fare
-        ) * BASE_INDEX
-
-        price_change_percent = (
-            (current_fare - base_fare)
-            / base_fare
-        ) * 100
-
-        results.append({
-            "route": route,
-            "period": period,
-            "base_period": base_period,
-            "base_fare": round(base_fare, 2),
-            "average_fare": round(current_fare, 2),
-            "index": round(index_value, 2),
-            "price_change_percent": round(
-                price_change_percent,
-                2
-            ),
-            "observation_count": item[
-                "observation_count"
-            ],
-            "calculation_method":
-                "Current route average fare / "
-                "Base-period route average fare × 100",
-        })
-
-    return results, base_period
-
-
-# ============================================================
-# CALCULATE OVERALL AIRFAREX INDEX
-# ============================================================
-
-def calculate_overall_index(route_indices):
-    """
-    Calculate the overall AirFareX index.
-
-    Current implementation:
-        Equal-weight average of comparable route indices.
-
-    Later, this can be upgraded to DGCA passenger-traffic
-    weighted indices for a stronger statistical methodology.
-    """
-
-    grouped = defaultdict(list)
-
-    for item in route_indices:
-
-        grouped[item["period"]].append(
-            item["index"]
-        )
-
-    overall_results = []
-
-    for period in sorted(grouped):
-
-        values = grouped[period]
-
-        if not values:
-            continue
-
-        overall_index = (
-            sum(values) / len(values)
-        )
-
-        inflation = overall_index - BASE_INDEX
-
-        overall_results.append({
-            "period": period,
-            "index": round(
-                overall_index,
-                2
-            ),
-            "base_index": BASE_INDEX,
-            "airfare_change_percent": round(
-                inflation,
-                2
-            ),
-            "routes_included": len(values),
-            "weighting_method": "Equal route weighting",
-        })
-
-    return overall_results
-
-
-# ============================================================
-# SAVE TO MONGODB
-# ============================================================
-
-def save_to_mongodb(
-    index_collection,
-    route_indices,
-    overall_indices
-):
-    """
-    Replace previously calculated index records
-    with the latest calculation.
-    """
-
-    # Remove previous calculated records
-    index_collection.delete_many({})
-
-    documents = []
-
-    # --------------------------------------------------------
-    # Route-level documents
-    # --------------------------------------------------------
-
-    for item in route_indices:
-
-        document = {
-            "record_type": "route",
-            **item,
-            "updated_at": datetime.now(
-                timezone.utc
-            ),
-        }
-
-        documents.append(document)
-
-    # --------------------------------------------------------
-    # Overall index documents
-    # --------------------------------------------------------
-
-    for item in overall_indices:
-
-        document = {
-            "record_type": "overall",
-            **item,
-            "updated_at": datetime.now(
-                timezone.utc
-            ),
-        }
-
-        documents.append(document)
-
-    if documents:
-        index_collection.insert_many(
-            documents
-        )
-
-    print()
-    print(
-        "Price index records saved:",
-        len(documents)
-    )
-
-
-# ============================================================
-# DISPLAY RESULTS
-# ============================================================
-
-def display_results(
-    route_indices,
-    overall_indices,
-    base_period
-):
-    """Display a readable summary in terminal."""
-
-    print()
-    print("=" * 60)
-    print("AIRFAREX PRICE INDEX")
-    print("=" * 60)
-
-    print()
-    print("Base period :", base_period)
-    print("Base index  :", BASE_INDEX)
-
-    periods = sorted(
-        set(
-            item["period"]
-            for item in route_indices
-        )
-    )
-
-    print()
-    print("Collection periods:")
     for period in periods:
-        print("  -", period)
-
-    # --------------------------------------------------------
-    # Overall index
-    # --------------------------------------------------------
-
-    print()
-    print("-" * 60)
-    print("OVERALL AIRFAREX INDEX")
-    print("-" * 60)
-
-    if overall_indices:
-
-        for item in overall_indices:
-
-            print(
-                f"{item['period']} : "
-                f"{item['index']:.2f} "
-                f"({item['airfare_change_percent']:+.2f}%)"
-            )
-
-    # --------------------------------------------------------
-    # Route index
-    # --------------------------------------------------------
-
-    print()
-    print("-" * 60)
-    print("ROUTE-LEVEL INDEX")
-    print("-" * 60)
-
-    # Show latest period only
-    if route_indices:
-
-        latest_period = max(
-            item["period"]
-            for item in route_indices
+        comparable = make_comparable_period(
+            basket,
+            base_period,
+            period,
         )
 
-        latest_routes = [
-            item
-            for item in route_indices
-            if item["period"] == latest_period
+        if comparable.empty:
+            continue
+
+        for route, group in comparable.groupby("route"):
+            # Average of normalized basket-item fares.
+            # Every route/travel-date basket item has equal importance
+            # within its route.
+            base_average = group["base_fare"].mean()
+            current_average = group["current_fare"].mean()
+
+            if base_average <= 0:
+                continue
+
+            route_index = (
+                current_average / base_average
+            ) * 100.0
+
+            route_records.append(
+                {
+                    "period": period,
+                    "route": route,
+                    "base_period": base_period,
+                    "base_fare": round(base_average, 2),
+                    "current_fare": round(current_average, 2),
+                    "index": round(route_index, 4),
+                    "basket_items": int(len(group)),
+                }
+            )
+
+    route_index_df = pd.DataFrame(route_records)
+
+    if route_index_df.empty:
+        raise ValueError(
+            "No comparable route basket items were found."
+        )
+
+    overall_records = []
+
+    for period, group in route_index_df.groupby("period"):
+        routes = group["route"].tolist()
+
+        weights, weighting_method = get_route_weights(routes)
+
+        weighted_values = []
+        total_weight = 0.0
+
+        for _, row in group.iterrows():
+            route = row["route"]
+
+            if route not in weights:
+                continue
+
+            weight = float(weights[route])
+
+            if weight <= 0:
+                continue
+
+            weighted_values.append(
+                float(row["index"]) * weight
+            )
+            total_weight += weight
+
+        if total_weight <= 0:
+            continue
+
+        overall_index = sum(weighted_values) / total_weight
+
+        previous_period = None
+        previous_index = None
+
+        earlier = [
+            p for p in periods
+            if p < period
         ]
 
-        latest_routes.sort(
-            key=lambda x: x["index"],
-            reverse=True
+        if earlier:
+            previous_period = earlier[-1]
+
+            previous_row = next(
+                (
+                    record
+                    for record in overall_records
+                    if record["period"] == previous_period
+                ),
+                None,
+            )
+
+            if previous_row:
+                previous_index = previous_row["index"]
+
+        if previous_index is not None and previous_index != 0:
+            change = (
+                (overall_index - previous_index)
+                / previous_index
+            ) * 100.0
+        else:
+            change = 0.0
+
+        overall_records.append(
+            {
+                "period": period,
+                "base_period": base_period,
+                "index": round(overall_index, 4),
+                "period_change_percent": round(change, 4),
+                "routes_used": len(
+                    [
+                        route
+                        for route in routes
+                        if route in weights
+                    ]
+                ),
+                "weighting_method": weighting_method,
+            }
         )
 
-        for item in latest_routes[:20]:
+    overall_index_df = pd.DataFrame(overall_records)
 
-            print(
-                f"{item['route']:10} "
-                f"Fare: ₹{item['average_fare']:,.2f} "
-                f"Index: {item['index']:.2f} "
-                f"Change: {item['price_change_percent']:+.2f}%"
-            )
-
-        if len(latest_routes) > 20:
-            print(
-                f"... and "
-                f"{len(latest_routes) - 20} more routes"
-            )
+    return (
+        route_index_df,
+        overall_index_df,
+        base_period,
+    )
 
 
-# ============================================================
+# ---------------------------------------------------------------------
+# SAVE TO MONGODB
+# ---------------------------------------------------------------------
+
+def save_price_index(
+    db,
+    route_index_df: pd.DataFrame,
+    overall_index_df: pd.DataFrame,
+) -> Tuple[int, int]:
+    collection = db[INDEX_COLLECTION]
+
+    collection.create_index(
+        [
+            ("type", ASCENDING),
+            ("period", ASCENDING),
+            ("route", ASCENDING),
+        ],
+        name="price_index_lookup",
+    )
+
+    inserted = 0
+    updated = 0
+
+    for _, row in route_index_df.iterrows():
+        document = {
+            "type": "route",
+            "period": row["period"],
+            "route": row["route"],
+            "base_period": row["base_period"],
+            "base_fare": float(row["base_fare"]),
+            "current_fare": float(row["current_fare"]),
+            "index": float(row["index"]),
+            "basket_items": int(row["basket_items"]),
+            "updated_at": datetime.now(timezone.utc),
+        }
+
+        result = collection.update_one(
+            {
+                "type": "route",
+                "period": row["period"],
+                "route": row["route"],
+            },
+            {"$set": document},
+            upsert=True,
+        )
+
+        if result.upserted_id is not None:
+            inserted += 1
+        else:
+            updated += 1
+
+    for _, row in overall_index_df.iterrows():
+        document = {
+            "type": "overall",
+            "period": row["period"],
+            "base_period": row["base_period"],
+            "index": float(row["index"]),
+            "period_change_percent": float(
+                row["period_change_percent"]
+            ),
+            "routes_used": int(row["routes_used"]),
+            "weighting_method": row["weighting_method"],
+            "updated_at": datetime.now(timezone.utc),
+        }
+
+        result = collection.update_one(
+            {
+                "type": "overall",
+                "period": row["period"],
+            },
+            {"$set": document},
+            upsert=True,
+        )
+
+        if result.upserted_id is not None:
+            inserted += 1
+        else:
+            updated += 1
+
+    return inserted, updated
+
+
+# ---------------------------------------------------------------------
 # MAIN
-# ============================================================
+# ---------------------------------------------------------------------
 
 def main():
+    print("=" * 70)
+    print("AirFareX - Robust Airfare Price Index Engine")
+    print("=" * 70)
+    print()
+
+    print("Methodology:")
+    print("  - Consistent route + travel-date basket")
+    print("  - Median fare normalization")
+    print("  - Only comparable basket items are included")
+    print("  - Fixed-base index (base = 100)")
+    print("  - Route weighting: explicit weights or DGCA schedule-frequency proxy")
+    print("  - No fabricated historical collection dates")
+    print()
+
+    db = get_mongo_database()
+
+    print("MongoDB connection successful!")
+    print(f"Database: {DB_NAME}")
+    print()
+
+    df = load_fare_observations(db)
+
+    if df.empty:
+        print("No valid fare observations available.")
+        return
+
+    print(f"Valid fare observations: {len(df)}")
+    print(
+        f"Collection periods: "
+        f"{df['collection_period'].nunique()}"
+    )
+
+    basket = build_basket_periods(df)
+
+    print(
+        f"Basket items: "
+        f"{basket[['route', 'travel_date']].drop_duplicates().shape[0]}"
+    )
+
+    print(
+        f"Route/travel-date/period basket records: {len(basket)}"
+    )
+
+    route_index_df, overall_index_df, base_period = calculate_index(
+        basket
+    )
 
     print()
-    print("=" * 60)
-    print("AirFareX - Airfare Price Index Engine")
-    print("=" * 60)
+    print(f"Base period: {base_period}")
+    print("Base index: 100.00")
+    print()
 
-    client = None
+    print(
+        f"Route index records: {len(route_index_df)}"
+    )
+    print(
+        f"Overall index periods: {len(overall_index_df)}"
+    )
 
-    try:
-
-        # ----------------------------------------------------
-        # Connect
-        # ----------------------------------------------------
-
-        client = connect_mongodb()
-
-        db = client[DATABASE_NAME]
-
-        fare_collection = db[
-            FARE_COLLECTION
-        ]
-
-        index_collection = db[
-            INDEX_COLLECTION
-        ]
-
-        # ----------------------------------------------------
-        # Load data
-        # ----------------------------------------------------
-
-        observations = load_fare_observations(
-            fare_collection
-        )
-
-        if not observations:
-            print()
-            print(
-                "No valid fare observations found."
-            )
-            return
-
-        # ----------------------------------------------------
-        # Route-period averages
-        # ----------------------------------------------------
-
-        route_periods = (
-            calculate_route_period_averages(
-                observations
-            )
-        )
-
-        print(
-            "Route-period averages:",
-            len(route_periods)
-        )
-
-        # ----------------------------------------------------
-        # Route indices
-        # ----------------------------------------------------
-
-        route_indices, base_period = (
-            calculate_price_index(
-                route_periods
-            )
-        )
-
-        print(
-            "Route index records:",
-            len(route_indices)
-        )
-
-        # ----------------------------------------------------
-        # Overall index
-        # ----------------------------------------------------
-
-        overall_indices = (
-            calculate_overall_index(
-                route_indices
-            )
-        )
-
-        print(
-            "Overall index periods:",
-            len(overall_indices)
-        )
-
-        # ----------------------------------------------------
-        # Save
-        # ----------------------------------------------------
-
-        save_to_mongodb(
-            index_collection,
-            route_indices,
-            overall_indices
-        )
-
-        # ----------------------------------------------------
-        # Display
-        # ----------------------------------------------------
-
-        display_results(
-            route_indices,
-            overall_indices,
-            base_period
-        )
-
+    if not overall_index_df.empty:
         print()
-        print("=" * 60)
-        print("PRICE INDEX CALCULATION COMPLETED")
-        print("=" * 60)
+        print("Overall Airfare Price Index:")
 
-    except Exception as error:
-
-        print()
-        print("Price index calculation failed:")
-        print(error)
-
-        raise
-
-    finally:
-
-        if client is not None:
-            client.close()
-
-            print()
+        for _, row in overall_index_df.iterrows():
             print(
-                "MongoDB connection closed."
+                f"  {row['period']} : "
+                f"{row['index']:.2f} "
+                f"({row['period_change_percent']:+.2f}%)"
             )
+
+    latest_period = route_index_df["period"].max()
+
+    latest_routes = route_index_df[
+        route_index_df["period"] == latest_period
+    ].sort_values(
+        "index",
+        ascending=False,
+    )
+
+    print()
+    print(f"Latest route-level index ({latest_period}):")
+
+    for _, row in latest_routes.head(10).iterrows():
+        print(
+            f"  {row['route']} | "
+            f"Fare ₹{row['current_fare']:,.2f} | "
+            f"Index {row['index']:.2f} | "
+            f"Basket items {row['basket_items']}"
+        )
+
+    inserted, updated = save_price_index(
+        db,
+        route_index_df,
+        overall_index_df,
+    )
+
+    print()
+    print("=" * 70)
+    print("MongoDB price_index collection updated")
+    print(f"Inserted: {inserted}")
+    print(f"Updated: {updated}")
+    print("=" * 70)
 
 
 if __name__ == "__main__":

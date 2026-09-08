@@ -78,6 +78,19 @@ MAX_SEARCHES = 10
 # Resume previously completed searches.
 RESUME_MODE = True
 
+# Historical collection mode.
+#
+# False:
+#   Skip route/date jobs already completed in the checkpoint.
+#
+# True:
+#   Collect the same route/date basket again on every run.
+#   This creates new collected_at timestamps and allows
+#   price_index.py to compare successive collection periods.
+#
+# Use this mode for daily historical price-index collection.
+HISTORICAL_COLLECTION_MODE = True
+
 # Wait between SerpApi requests.
 REQUEST_DELAY_SECONDS = 3
 
@@ -1779,6 +1792,12 @@ def main():
                 f"route/date searches."
             )
 
+        if HISTORICAL_COLLECTION_MODE:
+            print(
+                "Historical mode is ON: previously completed "
+                "route/date jobs will be collected again."
+            )
+
         # ----------------------------------------------------
         # Filter completed searches
         # ----------------------------------------------------
@@ -1793,7 +1812,14 @@ def main():
                 normalize_date(row["travel_date"])
             )
 
-            if RESUME_MODE and key in completed:
+            # In normal resume mode, completed route/date jobs are skipped.
+            # In historical mode, allow the same basket to be collected again
+            # on a later collection day so the price index gets a new period.
+            if (
+                RESUME_MODE
+                and not HISTORICAL_COLLECTION_MODE
+                and key in completed
+            ):
 
                 continue
 
