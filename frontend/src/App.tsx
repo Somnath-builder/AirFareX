@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { Home } from './pages/Home';
 import { Overview } from './pages/Overview';
@@ -9,6 +9,7 @@ import { Airlines } from './pages/Airlines';
 import { LeadTimeAnalysis } from './pages/LeadTimeAnalysis';
 import { DataExplorer } from './pages/DataExplorer';
 import { Methodology } from './pages/Methodology';
+import { FlightSearch } from './pages/FlightSearch';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         
         <Route path="/dashboard" element={<Layout />}>
           <Route index element={<Overview />} />
+          <Route path="search" element={<FlightSearch />} />
           <Route path="index" element={<AirfareIndex />} />
           <Route path="routes" element={<RoutesPage />} />
           <Route path="routes/:routeId" element={<RouteDetails />} />

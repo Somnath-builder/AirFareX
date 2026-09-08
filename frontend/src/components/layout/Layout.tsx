@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { ErrorBoundary } from './ErrorBoundary';
 import { 
   LayoutDashboard, 
   TrendingUp, 
@@ -9,11 +10,14 @@ import {
   Database, 
   BookOpen, 
   Menu,
-  X
+  X,
+  Search,
+  ServerCrash
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { AirfareXLogo } from '../ui/AirfareXLogo';
+import { airfareService } from '../../services/airfareService';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -21,6 +25,7 @@ export function cn(...inputs: ClassValue[]) {
 
 const navItems = [
   { name: 'Overview', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'Live Search', path: '/dashboard/search', icon: Search },
   { name: 'Airfare Index', path: '/dashboard/index', icon: TrendingUp },
   { name: 'Routes', path: '/dashboard/routes', icon: Map },
   { name: 'Airlines', path: '/dashboard/airlines', icon: Plane },
@@ -29,7 +34,7 @@ const navItems = [
   { name: 'Methodology', path: '/dashboard/methodology', icon: BookOpen },
 ];
 
-export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, setMobileOpen: (v: boolean) => void }) {
+export function Sidebar({ mobileOpen, setMobileOpen, isApiHealthy }: { mobileOpen: boolean, setMobileOpen: (v: boolean) => void, isApiHealthy: boolean }) {
   return (
     <>
       {/* Mobile overlay */}
@@ -79,12 +84,12 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
 
         <div className="absolute bottom-4 left-4 right-4">
           <div className="bg-[#101D30] rounded-lg p-3 border border-[#24344A]">
-            <div className="flex items-center gap-2 text-[#4F46E5] mb-1">
+            <div className={cn("flex items-center gap-2 mb-1", isApiHealthy ? "text-[#4F46E5]" : "text-red-500")}>
               <Database size={14} />
               <span className="text-xs font-semibold uppercase tracking-wider">Environment</span>
             </div>
             <p className="text-xs text-[#718198] leading-relaxed">
-              DEMO / MOCK DATA
+              {isApiHealthy ? "PRODUCTION (FASTAPI)" : "DISCONNECTED / MOCK"}
             </p>
           </div>
         </div>
@@ -93,7 +98,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
   );
 }
 
-export function TopBar({ setMobileOpen }: { setMobileOpen: (v: boolean) => void }) {
+export function TopBar({ setMobileOpen, isApiHealthy }: { setMobileOpen: (v: boolean) => void, isApiHealthy: boolean }) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -124,13 +129,20 @@ export function TopBar({ setMobileOpen }: { setMobileOpen: (v: boolean) => void 
       </div>
       
       <div className="flex items-center gap-4 text-sm text-[#718198]">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-          </span>
-          <span className="hidden sm:inline text-emerald-400 font-medium">Live Data</span>
-        </div>
+        {isApiHealthy ? (
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span className="hidden sm:inline text-emerald-400 font-medium">API Connected</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <ServerCrash className="w-4 h-4 text-red-500" />
+            <span className="hidden sm:inline text-red-500 font-medium">Backend Offline</span>
+          </div>
+        )}
         <div className="h-4 w-px bg-[#24344A]"></div>
         <span>{currentDate}</span>
       </div>
@@ -140,18 +152,38 @@ export function TopBar({ setMobileOpen }: { setMobileOpen: (v: boolean) => void 
 
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isApiHealthy, setIsApiHealthy] = useState(false);
+
+  useEffect(() => {
+    // Ping health endpoint on mount and every 30s
+    const checkHealth = async () => {
+      try {
+        await airfareService.getHealth();
+        setIsApiHealthy(true);
+      } catch (e) {
+        setIsApiHealthy(false);
+      }
+    };
+    
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex h-screen bg-[#07111F] overflow-hidden font-sans">
-      <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+      <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} isApiHealthy={isApiHealthy} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar setMobileOpen={setMobileOpen} />
+        <TopBar setMobileOpen={setMobileOpen} isApiHealthy={isApiHealthy} />
         <main className="flex-1 overflow-y-auto p-4 lg:p-8">
           <div className="max-w-7xl mx-auto">
-            <Outlet />
+            <ErrorBoundary><Outlet /></ErrorBoundary>
           </div>
         </main>
       </div>
     </div>
   );
 }
+
+
+

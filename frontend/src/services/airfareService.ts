@@ -1,31 +1,15 @@
-import { mockIndexTrend, mockCurrentIndex, mockRouteContributions, mockRouteWeights } from '../data/mockIndexData';
-import { mockRoutes } from '../data/mockRoutes';
-import { mockAirlines } from '../data/mockAirlines';
-import { mockLeadTime } from '../data/mockLeadTime';
-import { mockObservations } from '../data/mockObservations';
+import type {
+  HealthResponse,
+  RoutesResponse,
+  CheapestResponse,
+  PriceIndexResponse,
+  AnalyticsResponse,
+  SearchResponse,
+} from '../types';
 
-// Configuration
-// VITE_API_URL should point to the FastAPI backend (e.g., http://localhost:8000)
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// By default, we use mock data if the backend isn't ready. 
-// Set VITE_USE_MOCK_DATA=false in .env to enforce real API calls.
-const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === 'true' || import.meta.env.VITE_USE_MOCK_DATA === undefined;
-
-// Helper to simulate API delay for mock data
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * Generic fetch wrapper to handle API calls with a graceful fallback to mock data.
- * This makes it easy for the frontend to switch between the real FastAPI backend
- * and local mock data during development.
- */
-async function fetchFromApi<T>(endpoint: string, mockFallback: T): Promise<T> {
-  if (USE_MOCK_DATA) {
-    await delay(300);
-    return mockFallback;
-  }
-
+async function fetchFromApi<T>(endpoint: string): Promise<T> {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: {
@@ -35,45 +19,56 @@ async function fetchFromApi<T>(endpoint: string, mockFallback: T): Promise<T> {
     });
     
     if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.detail || `API error: ${response.status}`);
     }
     
     return await response.json();
   } catch (error) {
-    console.warn(`[API Connection Failed] Could not fetch ${endpoint}. Falling back to mock data.`, error);
-    // Graceful fallback to mock data if backend isn't running or throws an error
-    return mockFallback;
+    console.error(`[API Connection Failed] Could not fetch ${endpoint}.`, error);
+    throw error;
   }
 }
 
 export const airfareService = {
-  async getIndexData() {
-    return fetchFromApi('/api/index-data', {
-      trend: mockIndexTrend,
-      current: mockCurrentIndex,
-      contributions: mockRouteContributions,
-      weights: mockRouteWeights,
+  async getHealth(): Promise<HealthResponse> {
+    return fetchFromApi<HealthResponse>('/api/health');
+  },
+
+  async getAnalytics(): Promise<AnalyticsResponse> {
+    return fetchFromApi<AnalyticsResponse>('/api/analytics');
+  },
+
+  async getPriceIndex(route?: string): Promise<PriceIndexResponse> {
+    const endpoint = route ? `/api/price-index?route=${encodeURIComponent(route)}` : '/api/price-index';
+    return fetchFromApi<PriceIndexResponse>(endpoint);
+  },
+
+  async getRoutes(): Promise<RoutesResponse> {
+    return fetchFromApi<RoutesResponse>('/api/routes');
+  },
+
+  async getCheapestFares(origin?: string, destination?: string, travelDate?: string): Promise<CheapestResponse> {
+    const params = new URLSearchParams();
+    if (origin) params.append('origin', origin);
+    if (destination) params.append('destination', destination);
+    if (travelDate) params.append('travel_date', travelDate);
+    
+    const query = params.toString();
+    const endpoint = query ? `/api/cheapest?${query}` : '/api/cheapest';
+    return fetchFromApi<CheapestResponse>(endpoint);
+  },
+
+  async searchFlights(origin: string, destination: string, travelDate: string): Promise<SearchResponse> {
+    const params = new URLSearchParams({
+      origin,
+      destination,
+      travel_date: travelDate,
     });
-  },
-
-  async getRoutes() {
-    return fetchFromApi('/api/routes', mockRoutes);
-  },
-
-  async getRouteDetails(route: string) {
-    const mockDetail = mockRoutes.find(r => r.route === route) || mockRoutes[0];
-    return fetchFromApi(`/api/routes/${encodeURIComponent(route)}`, mockDetail);
-  },
-
-  async getAirlines() {
-    return fetchFromApi('/api/airlines', mockAirlines);
-  },
-
-  async getLeadTimeData() {
-    return fetchFromApi('/api/lead-time', mockLeadTime);
-  },
-
-  async getObservations() {
-    return fetchFromApi('/api/observations', mockObservations);
+    
+    // Live search endpoint which talks to SerpApi
+    return fetchFromApi<SearchResponse>(`/api/search?${params.toString()}`);
   },
 };
+
+

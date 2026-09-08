@@ -20,6 +20,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
+import certifi
 
 
 # ============================================================
@@ -70,10 +71,7 @@ app.add_middleware(
 # MONGODB
 # ============================================================
 
-client = MongoClient(
-    MONGODB_URI,
-    server_api=ServerApi("1")
-)
+client = MongoClient(MONGODB_URI, server_api=ServerApi('1'), tls=True, tlsAllowInvalidCertificates=True)
 
 db = client["AirFareX"]
 
@@ -593,3 +591,5 @@ def startup_event():
     print("Fare collection  :", "fare_observations")
     print("Index collection :", "price_index")
     print("=" * 60)
+
+

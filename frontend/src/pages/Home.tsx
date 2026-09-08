@@ -67,10 +67,10 @@ export function Home() {
           </button>
         </div>
 
-        {/* Demo Data Snapshot */}
+        {/* Live Data Snapshot */}
         <div className="mt-24 w-full max-w-4xl border-t border-[#24344A] pt-12 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <div className="text-xs font-bold tracking-widest text-[#718198] uppercase mb-8">
-            ────────── Demo Data ──────────
+            ────────── Live Data ──────────
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="bg-[#101D30] border border-[#24344A] rounded-2xl p-6 text-center hover:bg-[#14243A] transition-colors">
@@ -91,8 +91,9 @@ export function Home() {
       
       <footer className="bg-[#0B1728] py-8 border-t border-[#24344A] text-center text-[#718198] text-sm relative z-10">
         <p>Built for MoSPI Hackathon Problem Statement 26056</p>
-        <p className="mt-1">Demo Environment • Mock Data</p>
+        <p className="mt-1">Production Environment - Live Data</p>
       </footer>
     </div>
   );
 }
+
