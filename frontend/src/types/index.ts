@@ -155,3 +155,40 @@ export interface SearchResponse {
 }
 
 
+
+
+export interface LeadTimeDailyCurve {
+  days_before_departure: number;
+  average_fare: number;
+  median_fare: number;
+  minimum_fare: number;
+  maximum_fare: number;
+  observations: number;
+}
+
+export interface LeadTimeWindow {
+  key: string;
+  label: string;
+  average_fare: number;
+  median_fare: number;
+  minimum_fare: number;
+  maximum_fare: number;
+  observations: number;
+}
+
+export interface LeadTimeCarrierComparison {
+  airline: string;
+  total_observations: number;
+  overall_average_fare: number;
+  last_minute_avg_fare: number;
+  advance_avg_fare: number | null;
+  surge_percentage: number | null;
+}
+
+export interface LeadTimeResponse {
+  curve: LeadTimeDailyCurve[];
+  windows: LeadTimeWindow[];
+  carrier_comparison: LeadTimeCarrierComparison[];
+  available_routes: string[];
+  available_airlines: string[];
+}

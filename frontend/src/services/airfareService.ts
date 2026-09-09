@@ -5,6 +5,7 @@ import type {
   PriceIndexResponse,
   AnalyticsResponse,
   SearchResponse,
+  LeadTimeResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -57,6 +58,18 @@ export const airfareService = {
     const query = params.toString();
     const endpoint = query ? `/api/cheapest?${query}` : '/api/cheapest';
     return fetchFromApi<CheapestResponse>(endpoint);
+  },
+
+  
+  async getLeadTimeAnalysis(params?: { origin?: string; destination?: string; route?: string; airline?: string }): Promise<LeadTimeResponse> {
+    const query = new URLSearchParams();
+    if (params?.origin) query.append('origin', params.origin);
+    if (params?.destination) query.append('destination', params.destination);
+    if (params?.route) query.append('route', params.route);
+    if (params?.airline) query.append('airline', params.airline);
+    
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return fetchFromApi<LeadTimeResponse>(`/api/lead-time${queryString}`);
   },
 
   async searchFlights(origin: string, destination: string, travelDate: string): Promise<SearchResponse> {
