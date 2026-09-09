@@ -122,7 +122,7 @@ export function AirfareIndex() {
               <Tooltip 
                 contentStyle={{ backgroundColor: '#0B1728', borderRadius: '8px', border: '1px solid #24344A', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
                 itemStyle={{ color: '#F4F7FB' }}
-                formatter={(value: any, name: string) => [`${value}`, `Y (${name})`]}
+                formatter={((value: any, name?: any) => [`${value}`, `Y (${name})`]) as any}
                 labelFormatter={(label) => `X (Date): ${new Date(label as string).toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}`}
               />
               <Legend verticalAlign="top" height={36}/>
