@@ -7,7 +7,8 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  ReferenceLine
+  ReferenceLine,
+  Legend
 } from 'recharts';
 import { TrendingUp, Scale, Calculator, AlertCircle } from 'lucide-react';
 import { KpiCard, ChartCard } from '../components/ui/Cards';
@@ -121,8 +122,10 @@ export function AirfareIndex() {
               <Tooltip 
                 contentStyle={{ backgroundColor: '#0B1728', borderRadius: '8px', border: '1px solid #24344A', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
                 itemStyle={{ color: '#F4F7FB' }}
-                labelFormatter={(label) => new Date(label as string).toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}
+                formatter={(value: any, name: string) => [`${value}`, `Y (${name})`]}
+                labelFormatter={(label) => `X (Date): ${new Date(label as string).toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}`}
               />
+              <Legend verticalAlign="top" height={36}/>
               <ReferenceLine yAxisId="left" y={100} stroke="#4F46E5" strokeDasharray="3 3" opacity={0.5} label={{ position: 'insideTopLeft', value: 'Base (100)', fill: '#718198', fontSize: 11 }} />
               
               <Line 

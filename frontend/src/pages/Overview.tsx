@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { 
   LineChart, 
   Line, 
@@ -7,7 +7,8 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  ReferenceLine
+  ReferenceLine,
+  Legend
 } from 'recharts';
 import { IndianRupee, TrendingUp, Map, Navigation, Plane } from 'lucide-react';
 import { KpiCard, ChartCard, TrendIndicator } from '../components/ui/Cards';
@@ -28,10 +29,25 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
 }
 export function Overview() {
   const [loading, setLoading] = useState(true);
+
   const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
   const [indexData, setIndexData] = useState<PriceIndexPoint[]>([]);
   const [routesData, setRoutesData] = useState<BackendRoute[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const [timeFilter, setTimeFilter] = useState<'1W' | '1M' | '3M' | 'All'>('All');
+  
+  const filteredIndexData = useMemo(() => {
+    if (timeFilter === 'All') return indexData;
+    const now = new Date();
+    const cutoff = new Date();
+    if (timeFilter === '1W') cutoff.setDate(now.getDate() - 7);
+    else if (timeFilter === '1M') cutoff.setMonth(now.getMonth() - 1);
+    else if (timeFilter === '3M') cutoff.setMonth(now.getMonth() - 3);
+    
+    return indexData.filter(d => new Date(d.period) >= cutoff);
+  }, [indexData, timeFilter]);
+
 
   useEffect(() => {
     const loadData = async () => {
@@ -134,15 +150,16 @@ export function Overview() {
         subtitle="Base Period = 100"
         action={
           <div className="flex bg-[#101D30] p-1 rounded-md text-xs font-medium border border-[#24344A]">
-            <button className="px-3 py-1 rounded text-[#718198] hover:text-white">3M</button>
-            <button className="px-3 py-1 rounded bg-[#1A2C47] text-white shadow-sm">6M</button>
-            <button className="px-3 py-1 rounded text-[#718198] hover:text-white">All</button>
+            <button onClick={() => setTimeFilter('1W')} className={`px-3 py-1 rounded ${timeFilter === '1W' ? 'bg-[#1A2C47] text-white shadow-sm' : 'text-[#718198] hover:text-white'}`}>1W</button>
+            <button onClick={() => setTimeFilter('1M')} className={`px-3 py-1 rounded ${timeFilter === '1M' ? 'bg-[#1A2C47] text-white shadow-sm' : 'text-[#718198] hover:text-white'}`}>1M</button>
+            <button onClick={() => setTimeFilter('3M')} className={`px-3 py-1 rounded ${timeFilter === '3M' ? 'bg-[#1A2C47] text-white shadow-sm' : 'text-[#718198] hover:text-white'}`}>3M</button>
+            <button onClick={() => setTimeFilter('All')} className={`px-3 py-1 rounded ${timeFilter === 'All' ? 'bg-[#1A2C47] text-white shadow-sm' : 'text-[#718198] hover:text-white'}`}>All</button>
           </div>
         }
       >
         <div className="h-[350px] w-full mt-4">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={indexData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+            <LineChart data={filteredIndexData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1A2C47" />
               <XAxis 
                 dataKey="period" 
@@ -151,7 +168,7 @@ export function Overview() {
                 tick={{ fill: '#718198', fontSize: 12 }}
                 tickFormatter={(val) => {
                   const date = new Date(val);
-                  return `${date.toLocaleString('default', { month: 'short' })} '${date.getFullYear().toString().slice(2)}`;
+                  return `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })} '${date.getFullYear().toString().slice(2)}`;
                 }}
               />
               <YAxis 
@@ -163,9 +180,10 @@ export function Overview() {
               <Tooltip 
                 contentStyle={{ backgroundColor: '#0B1728', borderRadius: '8px', border: '1px solid #24344A', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
                 itemStyle={{ color: '#F4F7FB' }}
-                formatter={(value: any) => [value.toFixed(1), 'Index']}
-                labelFormatter={(label) => new Date(label as string).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                formatter={(value: any) => [`${Number(value).toFixed(1)}`, 'Y (Index)']}
+                labelFormatter={(label) => `X (Date): ${new Date(label as string).toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}`}
               />
+              <Legend verticalAlign="top" height={36}/>
               <ReferenceLine y={100} stroke="#4F46E5" strokeDasharray="3 3" opacity={0.5} label={{ position: 'insideTopLeft', value: 'Base (100)', fill: '#718198', fontSize: 11 }} />
               <Line 
                 type="monotone" 
