@@ -6,3 +6,6 @@ SerpApi Google Flights,AMD,IXK,2026-09-08,NO_FARE_FOUND,Google Flights returned 
 Google Flights via SerpApi,AGX,GOX,2026-09-08,NO_FARE_FOUND,Google Flights returned no fare observations.,2026-09-07T17:40:37.590453+00:00
 Google Flights via SerpApi,BLR,SDW,2026-09-08,NO_FARE_FOUND,Google Flights returned no fare observations.,2026-09-07T17:48:06.558002+00:00
 Google Flights via SerpApi,AMD,JGA,2026-09-08,NO_FARE_FOUND,Google Flights returned no fare observations.,2026-09-08T14:12:38.160398+00:00
+Google Flights via SerpApi,AGX,GOX,2026-09-10,NO_FARE_FOUND,Google Flights returned no fare observations.,2026-09-09T14:46:47.933697+00:00
+Google Flights via SerpApi,AMD,HSS,2026-09-10,NO_FARE_FOUND,Google Flights hasn't returned any results for this query.,2026-09-09T14:47:48.877907+00:00
+Google Flights via SerpApi,AMD,IXK,2026-09-10,NO_FARE_FOUND,Google Flights hasn't returned any results for this query.,2026-09-09T14:48:06.272408+00:00

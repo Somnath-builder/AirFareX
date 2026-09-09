@@ -636,6 +636,19 @@ class SerpApiFareSource:
                 data.get("error")
             )
 
+            lower_error = error_message.lower()
+            if (
+                "hasn't returned any results" in lower_error
+                or "has not returned any results" in lower_error
+                or "no flights found" in lower_error
+                or "no results found" in lower_error
+            ):
+                return {
+                    "best_flights": [],
+                    "other_flights": [],
+                    "_no_results_note": error_message,
+                }
+
             raise SerpApiQueryError(
                 f"SerpApi error: {error_message}"
             )
@@ -1726,7 +1739,9 @@ def process_one_search(
 
     if not records:
 
-        reason = (
+        reason = data.get(
+            "_no_results_note"
+        ) or (
             "Google Flights returned no "
             "fare observations."
         )
