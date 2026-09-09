@@ -7,14 +7,20 @@ Provides:
     /api/cheapest
     /api/price-index
     /api/analytics
+    /api/lead-time
     /api/search
 """
 
 import hashlib
 import os
 import subprocess
+import sys
 from datetime import datetime, timezone
 from typing import Optional
+
+# Ensure parent directory is in sys.path to import lead_time_engine
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from lead_time_engine import calculate_lead_time_metrics
 
 import requests
 from dotenv import load_dotenv
@@ -441,6 +447,38 @@ def get_analytics():
         "airlines":
             airlines,
     }
+
+
+# ============================================================
+# LEAD TIME ANALYSIS
+# ============================================================
+
+@app.get("/api/lead-time")
+def get_lead_time_analysis(
+    origin: Optional[str] = Query(None, min_length=3, max_length=3),
+    destination: Optional[str] = Query(None, min_length=3, max_length=3),
+    route: Optional[str] = Query(None),
+    airline: Optional[str] = Query(None),
+):
+    """
+    Lead Time Analysis Endpoint:
+    Returns the dynamic pricing curve across advance booking days (T+0 to T+45+),
+    macro booking window buckets, carrier yield management comparisons, and economic insights.
+    """
+    try:
+        metrics = calculate_lead_time_metrics(
+            fare_collection,
+            origin=origin,
+            destination=destination,
+            route=route,
+            airline=airline,
+        )
+        return metrics
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to calculate lead time analysis: {str(error)}"
+        )
 
 
 # ============================================================
