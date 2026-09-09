@@ -68,6 +68,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, isApiHealthy }: { mobileOpe
             <NavLink
               key={item.path}
               to={item.path}
+              end={item.path === '/dashboard'}
               onClick={() => setMobileOpen(false)}
               className={({ isActive }) => cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium",

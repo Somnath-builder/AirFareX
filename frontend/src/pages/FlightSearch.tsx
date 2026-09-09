@@ -5,6 +5,91 @@ import type { SearchResponse, SearchFlightOption, FlightSegment } from '../types
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Cards';
 import clsx from 'clsx';
 
+
+const AIRPORTS = [
+  { code: 'DEL', city: 'Delhi' },
+  { code: 'BOM', city: 'Mumbai' },
+  { code: 'BLR', city: 'Bengaluru' },
+  { code: 'CCU', city: 'Kolkata' },
+  { code: 'HYD', city: 'Hyderabad' },
+  { code: 'MAA', city: 'Chennai' },
+  { code: 'AMD', city: 'Ahmedabad' },
+  { code: 'PNQ', city: 'Pune' },
+  { code: 'GOI', city: 'Goa (Dabolim)' },
+  { code: 'GOX', city: 'Goa (Mopa)' },
+  { code: 'JAI', city: 'Jaipur' },
+  { code: 'LKO', city: 'Lucknow' },
+  { code: 'COK', city: 'Kochi' },
+  { code: 'PAT', city: 'Patna' },
+  { code: 'BBI', city: 'Bhubaneswar' },
+  { code: 'GAU', city: 'Guwahati' },
+  { code: 'TRV', city: 'Thiruvananthapuram' },
+  { code: 'ATQ', city: 'Amritsar' },
+  { code: 'IXC', city: 'Chandigarh' },
+  { code: 'SXR', city: 'Srinagar' },
+];
+
+function AirportAutocomplete({ value, onChange, placeholder }: { value: string, onChange: (val: string) => void, placeholder: string }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [inputValue, setInputValue] = React.useState(value);
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredAirports = AIRPORTS.filter(
+    (a) => a.city.toLowerCase().includes(inputValue.toLowerCase()) || a.code.toLowerCase().includes(inputValue.toLowerCase())
+  );
+
+  return (
+    <div ref={wrapperRef} className="relative w-full">
+      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => {
+          setInputValue(e.target.value);
+          onChange(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        placeholder={placeholder}
+        className="w-full bg-slate-950 border border-slate-800 rounded-lg py-3 pl-10 pr-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all"
+      />
+      {isOpen && filteredAirports.length > 0 && (
+        <ul className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-800 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+          {filteredAirports.map((airport) => (
+            <li
+              key={airport.code}
+              className="px-4 py-2 hover:bg-slate-800 cursor-pointer text-slate-200 flex justify-between items-center"
+              onClick={() => {
+                const finalValue = airport.code;
+                setInputValue(finalValue);
+                onChange(finalValue);
+                setIsOpen(false);
+              }}
+            >
+              <span>{airport.city}({airport.code})</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+
 export const FlightSearch: React.FC = () => {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
@@ -135,32 +220,12 @@ export const FlightSearch: React.FC = () => {
           <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 items-end">
             <div className="flex-1 w-full">
               <label className="block text-sm font-medium text-slate-400 mb-2">Origin</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                <input 
-                  type="text" 
-                  value={origin}
-                  onChange={(e) => setOrigin(e.target.value.toUpperCase())}
-                  placeholder="DEL"
-                  maxLength={3}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg py-3 pl-10 pr-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all uppercase"
-                />
-              </div>
+              <AirportAutocomplete value={origin} onChange={(val) => setOrigin(val.toUpperCase())} placeholder="DEL (e.g. Delhi)" />
             </div>
 
             <div className="flex-1 w-full">
               <label className="block text-sm font-medium text-slate-400 mb-2">Destination</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                <input 
-                  type="text" 
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value.toUpperCase())}
-                  placeholder="BOM"
-                  maxLength={3}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg py-3 pl-10 pr-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all uppercase"
-                />
-              </div>
+              <AirportAutocomplete value={destination} onChange={(val) => setDestination(val.toUpperCase())} placeholder="BOM (e.g. Mumbai)" />
             </div>
 
             <div className="flex-1 w-full">
