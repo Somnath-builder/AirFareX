@@ -365,9 +365,10 @@ def connect_mongodb():
 def get_index_key(index_information):
     """Return normalized index key tuple."""
 
-    return tuple(
-        index_information.get("key", [])
-    )
+    key = index_information.get("key", {})
+    if hasattr(key, "items"):
+        return tuple(key.items())
+    return tuple(key)
 
 
 def ensure_index(collection, desired_key, unique=False):
@@ -1207,6 +1208,42 @@ def get_checkpoint_completed_today():
     return completed_today
 
 
+def is_completed_today_in_mongodb(collection, origin, destination, travel_date):
+    """
+    Return True when this route/date already has a successful
+    collection recorded today in India Standard Time.
+
+    MongoDB is checked in addition to the CSV checkpoint so a crash
+    after saving fares but before writing the checkpoint cannot create
+    duplicate same-day historical observations.
+    """
+
+    today = datetime.now(LOCAL_TIMEZONE).date()
+
+    cursor = collection.find(
+        {
+            "origin": origin,
+            "destination": destination,
+            "travel_date": travel_date,
+        },
+        {"_id": 0, "collected_at": 1},
+    )
+
+    for document in cursor:
+        timestamp = clean_text(document.get("collected_at"))
+        if not timestamp:
+            continue
+
+        dt = pd.to_datetime(timestamp, utc=True, errors="coerce")
+        if pd.isna(dt):
+            continue
+
+        if dt.to_pydatetime().astimezone(LOCAL_TIMEZONE).date() == today:
+            return True
+
+    return False
+
+
 def append_checkpoint(
     origin,
     destination,
@@ -1899,11 +1936,14 @@ def main():
             #   Never repeat a successfully completed route/date.
             #
             # Historical mode:
-            #   Repeat yesterday's completed route/date jobs,
+            #   Repeat previously completed route/date jobs on a new day,
             #   but never repeat a job already completed today.
             #
             # Retryable failures are NOT in the checkpoint and therefore
             # remain eligible for another attempt.
+            #
+            # The MongoDB same-day check below is performed immediately
+            # before an API call as an additional crash-safe guard.
 
             if RESUME_MODE:
                 if HISTORICAL_COLLECTION_MODE:
@@ -1996,6 +2036,19 @@ def main():
             travel_date = normalize_date(
                 row["travel_date"]
             )
+
+            # Final same-day guard using MongoDB. This protects against
+            # duplicate collection if the process crashed after MongoDB
+            # insertion but before the checkpoint was written.
+            if HISTORICAL_COLLECTION_MODE and is_completed_today_in_mongodb(
+                mongo_collection, origin, destination, travel_date
+            ):
+                print()
+                print(
+                    f"Skipping {origin} -> {destination} on {travel_date}: "
+                    "already collected today (IST) in MongoDB."
+                )
+                continue
 
             print()
             print(
