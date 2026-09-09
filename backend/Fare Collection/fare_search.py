@@ -36,6 +36,7 @@ import sys
 import time
 import hashlib
 import shutil
+import subprocess
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
@@ -170,12 +171,39 @@ CHECKPOINT_COLUMNS = [
 # ============================================================
 
 class SerpApiRateLimitError(Exception):
-    """Raised when SerpApi returns HTTP 429."""
-    pass
+    """Raised when SerpApi returns HTTP 429 or search credits are exhausted."""
 
 
 class SerpApiQueryError(Exception):
     """Raised for a SerpApi query/API error."""
+
+
+def notify_quota_exhausted(source="Fare Collection Engine"):
+    """
+    Triggers an instant alert when SerpApi limits are exhausted:
+    1. Prints a prominent terminal banner.
+    2. Triggers a native macOS notification popup and chime.
+    """
+    print()
+    print("=" * 70)
+    print("🚨 [AIRFAREX ALERT] SERPAPI SEARCH QUOTA EXHAUSTED (HTTP 429) 🚨")
+    print(f"Source : {source}")
+    print("Detail : Your SerpApi account has reached its search credit limit.")
+    print("👉 ACTION REQUIRED: Update SERPAPI_API_KEY in backend/.env")
+    print("=" * 70)
+    print()
+
+    try:
+        title = "AirFareX: SerpApi Limit Exhausted"
+        message = "SerpApi quota reached (HTTP 429). Please update SERPAPI_API_KEY in backend/.env."
+        apple_script = (
+            f'display notification "{message}" '
+            f'with title "{title}" '
+            f'sound name "Sosumi"'
+        )
+        subprocess.run(["osascript", "-e", apple_script], check=False, timeout=3)
+    except Exception:
+        pass
     pass
 
 
@@ -596,9 +624,11 @@ class SerpApiFareSource:
 
         if response.status_code == 429:
 
+            notify_quota_exhausted("Fare Collection Engine (HTTP 429)")
+
             raise SerpApiRateLimitError(
                 "SerpApi returned HTTP 429 "
-                "(rate limit reached)."
+                "(rate limit or search credits exhausted)."
             )
 
         # ----------------------------------------------------
@@ -637,6 +667,20 @@ class SerpApiFareSource:
             )
 
             lower_error = error_message.lower()
+
+            # Quota or account limit reached
+            if (
+                "run out of searches" in lower_error
+                or "monthly limit" in lower_error
+                or "plan limit" in lower_error
+                or "account limit" in lower_error
+                or "rate limit" in lower_error
+            ):
+                notify_quota_exhausted("Fare Collection Engine (JSON Quota Error)")
+                raise SerpApiRateLimitError(
+                    f"SerpApi limit reached: {error_message}"
+                )
+
             if (
                 "hasn't returned any results" in lower_error
                 or "has not returned any results" in lower_error

@@ -10,15 +10,17 @@ Provides:
     /api/search
 """
 
+import hashlib
 import os
-from datetime import datetime
+import subprocess
+from datetime import datetime, timezone
 from typing import Optional
 
 import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from pymongo.server_api import ServerApi
 import certifi
 
@@ -442,7 +444,115 @@ def get_analytics():
 
 
 # ============================================================
-# LIVE FLIGHT SEARCH
+# QUOTA EXHAUSTION ALERT NOTIFIER
+# ============================================================
+
+def notify_quota_exhausted(source="AirFareX Backend"):
+    """
+    Triggers an instant alert when SerpApi limits are exhausted:
+    1. Prints a prominent terminal banner.
+    2. Triggers a native macOS notification popup and chime.
+    """
+    print()
+    print("=" * 70)
+    print("🚨 [AIRFAREX ALERT] SERPAPI SEARCH QUOTA EXHAUSTED (HTTP 429) 🚨")
+    print(f"Source : {source}")
+    print("Detail : Your SerpApi account has reached its search credit limit.")
+    print("👉 ACTION REQUIRED: Update SERPAPI_API_KEY in backend/.env")
+    print("=" * 70)
+    print()
+
+    try:
+        title = "AirFareX: SerpApi Limit Exhausted"
+        message = "SerpApi quota reached (HTTP 429). Please update SERPAPI_API_KEY in backend/.env."
+        apple_script = (
+            f'display notification "{message}" '
+            f'with title "{title}" '
+            f'sound name "Sosumi"'
+        )
+        subprocess.run(["osascript", "-e", apple_script], check=False, timeout=3)
+    except Exception:
+        pass
+
+
+# ============================================================
+# LIVE SEARCH FARE INGESTION HELPER
+# ============================================================
+
+def format_fare_observation(
+    flight_group,
+    origin,
+    destination,
+    travel_date,
+    collected_at
+):
+    """
+    Normalizes a Google Flights result into the official AirFareX
+    fare_observations schema for price index calculation.
+    """
+    price_val = flight_group.get("price")
+    if price_val is None:
+        return None
+
+    try:
+        price = float(str(price_val).replace(",", "").replace("₹", "").strip())
+    except (ValueError, TypeError):
+        return None
+
+    legs = flight_group.get("flights", [])
+    if not isinstance(legs, list):
+        legs = []
+
+    airlines = []
+    flight_numbers = []
+    departure_time = ""
+    arrival_time = ""
+
+    for i, leg in enumerate(legs):
+        if not isinstance(leg, dict):
+            continue
+        airline = str(leg.get("airline", "")).strip()
+        flight_num = str(leg.get("flight_number", "")).strip()
+
+        if airline and airline not in airlines:
+            airlines.append(airline)
+        if flight_num:
+            flight_numbers.append(flight_num)
+
+        if i == 0:
+            departure_time = str(leg.get("departure_airport", {}).get("time", "")).strip()
+        if i == len(legs) - 1:
+            arrival_time = str(leg.get("arrival_airport", {}).get("time", "")).strip()
+
+    airline_str = ", ".join(airlines) if airlines else "Unknown Airline"
+    flight_numbers_str = ", ".join(flight_numbers)
+
+    # Generate deterministic hash to prevent accidental duplicates
+    raw_hash = f"{origin}|{destination}|{travel_date}|{airline_str}|{flight_numbers_str}|{price}|INR|{collected_at}"
+    observation_id = hashlib.sha256(raw_hash.encode("utf-8")).hexdigest()
+
+    return {
+        "observation_id": observation_id,
+        "source": "Live User Search (SerpApi)",
+        "origin": origin,
+        "destination": destination,
+        "requested_origin": origin,
+        "requested_destination": destination,
+        "travel_date": travel_date,
+        "airline": airline_str,
+        "flight_numbers": flight_numbers_str,
+        "departure_time": departure_time,
+        "arrival_time": arrival_time,
+        "stops": flight_group.get("stops", max(0, len(legs) - 1)),
+        "total_duration_minutes": flight_group.get("total_duration"),
+        "fare_amount": price,
+        "currency": "INR",
+        "collected_at": collected_at,
+    }
+
+
+# ============================================================
+# LIVE FLIGHT SEARCH & PRICE INDEX INGESTION
 # ============================================================
 
 @app.get("/api/search")
@@ -462,10 +572,10 @@ def search_flights(
     ),
 ):
     """
-    Perform a fresh Google Flights search through SerpApi.
-
-    This is a near-real-time search and does not use the
-    historical MongoDB fare observations.
+    1. Performs a live Google Flights search through SerpApi.
+    2. Returns instantaneous real-time flight cards to the client.
+    3. Asynchronously records observations into MongoDB (fare_observations)
+       to immediately feed the real-time Price Index engine.
     """
 
     if not SERPAPI_API_KEY:
@@ -475,8 +585,9 @@ def search_flights(
             detail="SERPAPI_API_KEY not found in .env"
         )
 
-    origin = origin.upper()
-    destination = destination.upper()
+    origin = origin.upper().strip()
+    destination = destination.upper().strip()
+    collected_at = datetime.now(timezone.utc).isoformat()
 
     params = {
         "engine": "google_flights",
@@ -501,11 +612,13 @@ def search_flights(
 
         if response.status_code == 429:
 
+            notify_quota_exhausted(source="Live Flight Search API")
+
             raise HTTPException(
                 status_code=429,
                 detail=(
-                    "SerpApi rate limit reached. "
-                    "Please try again later."
+                    "SERPAPI_QUOTA_EXHAUSTED: SerpApi search limit reached. "
+                    "Please update SERPAPI_API_KEY in backend/.env"
                 )
             )
 
@@ -527,7 +640,46 @@ def search_flights(
             detail="Unable to contact SerpApi."
         )
 
+    # Check if SerpApi returned a quota exhaustion message in JSON
+    api_error = str(data.get("error", "")).lower()
+    if api_error and (
+        "run out of searches" in api_error
+        or "monthly limit" in api_error
+        or "plan limit" in api_error
+        or "account limit" in api_error
+        or "rate limit" in api_error
+    ):
+        notify_quota_exhausted(source="Live Flight Search API (JSON Quota Error)")
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                f"SERPAPI_QUOTA_EXHAUSTED: {data.get('error')}. "
+                "Please update SERPAPI_API_KEY in backend/.env"
+            )
+        )
+
+    # Gracefully handle "Google Flights returned no results"
+    if api_error and (
+        "hasn't returned any results" in api_error
+        or "has not returned any results" in api_error
+        or "no flights found" in api_error
+    ):
+        return {
+            "origin": origin,
+            "destination": destination,
+            "travel_date": travel_date,
+            "source": "SerpApi Google Flights",
+            "near_real_time": True,
+            "count": 0,
+            "cheapest": None,
+            "flights": [],
+            "saved_to_mongodb": False,
+            "observations_saved": 0,
+            "message": "No flights found for this route and date.",
+        }
+
     flights = []
+    mongo_records = []
 
     combined_results = (
         data.get("best_flights", [])
@@ -559,6 +711,42 @@ def search_flights(
                 ),
         })
 
+        # Build MoSPI Price Index observation document
+        obs = format_fare_observation(
+            flight_group,
+            origin,
+            destination,
+            travel_date,
+            collected_at
+        )
+        if obs:
+            mongo_records.append(obs)
+
+    # Ingest into MongoDB fare_observations collection
+    observations_saved = 0
+    if mongo_records:
+        try:
+            ops = [
+                UpdateOne(
+                    {"observation_id": doc["observation_id"]},
+                    {"$set": doc},
+                    upsert=True
+                )
+                for doc in mongo_records
+            ]
+            write_result = fare_collection.bulk_write(
+                ops,
+                ordered=False
+            )
+            observations_saved = (
+                len(write_result.upserted_ids)
+                + write_result.modified_count
+                + write_result.matched_count
+            )
+        except Exception as db_err:
+            # Never fail the user's flight search if background DB logging fails
+            print(f"[Warning] Failed to write live observations to MongoDB: {db_err}")
+
     flights.sort(
         key=lambda x: x["price"]
     )
@@ -573,6 +761,8 @@ def search_flights(
         "cheapest":
             flights[0] if flights else None,
         "flights": flights,
+        "saved_to_mongodb": observations_saved > 0,
+        "observations_saved": observations_saved,
     }
 
 
