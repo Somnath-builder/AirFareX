@@ -192,3 +192,40 @@ export interface LeadTimeResponse {
   available_routes: string[];
   available_airlines: string[];
 }
+
+
+export interface RouteOverallStats {
+  total_observations: number;
+  average_fare: number;
+  minimum_fare: number;
+  maximum_fare: number;
+}
+
+export interface RoutePriceTrend {
+  travel_date: string;
+  average_fare: number;
+  minimum_fare: number;
+}
+
+export interface RouteCarrierShare {
+  airline: string;
+  observations: number;
+  average_fare: number;
+}
+
+export interface RouteCheapestFlight {
+  airline: string;
+  fare_amount: number;
+  travel_date: string;
+  departure_time: string;
+  flight_numbers: string;
+}
+
+export interface RouteStatsResponse {
+  origin: string;
+  destination: string;
+  overall_stats: RouteOverallStats;
+  price_trend: RoutePriceTrend[];
+  carrier_share: RouteCarrierShare[];
+  cheapest_flights: RouteCheapestFlight[];
+}

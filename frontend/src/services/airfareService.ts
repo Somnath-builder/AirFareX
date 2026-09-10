@@ -6,6 +6,7 @@ import type {
   AnalyticsResponse,
   SearchResponse,
   LeadTimeResponse,
+  RouteStatsResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -70,6 +71,11 @@ export const airfareService = {
     
     const queryString = query.toString() ? `?${query.toString()}` : '';
     return fetchFromApi<LeadTimeResponse>(`/api/lead-time${queryString}`);
+  },
+
+  
+  async getRouteStats(origin: string, destination: string): Promise<RouteStatsResponse> {
+    return fetchFromApi<RouteStatsResponse>(`/api/route-stats/${origin}/${destination}`);
   },
 
   async searchFlights(origin: string, destination: string, travelDate: string): Promise<SearchResponse> {

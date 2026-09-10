@@ -75,7 +75,7 @@ export function AirfareXLogo({ size = 180, className, animated = true }: Airfare
         <g id="orbital-group">
           {/* Saffron / Orange */}
           <path 
-            d="M 10 220 A 190 70 0 0 0 390 220 A 190 70 0 0 0 10 220" 
+            d="M 20 210 A 180 60 0 0 0 380 210 A 180 60 0 0 0 20 210" 
             fill="none" 
             stroke="#FF9933" 
             strokeWidth="10" 
@@ -99,7 +99,7 @@ export function AirfareXLogo({ size = 180, className, animated = true }: Airfare
           />
           {/* Green */}
           <path 
-            d="M 30 220 A 170 50 0 0 0 370 220 A 170 50 0 0 0 30 220" 
+            d="M 20 230 A 180 60 0 0 0 380 230 A 180 60 0 0 0 20 230" 
             fill="none" 
             stroke="#138808" 
             strokeWidth="10" 

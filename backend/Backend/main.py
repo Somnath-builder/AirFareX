@@ -821,3 +821,114 @@ def startup_event():
     print("=" * 60)
 
 
+
+
+# ============================================================
+# ROUTE DETAILS STATS
+# ============================================================
+
+@app.get("/api/route-stats/{origin}/{destination}")
+def get_route_stats(origin: str, destination: str):
+    try:
+        match_stage = {
+            "$match": {
+                "origin": origin.upper(),
+                "destination": destination.upper(),
+                "fare_amount": {"$type": "number", "$gt": 0}
+            }
+        }
+        
+        # Overall Stats
+        overall_pipeline = [
+            match_stage,
+            {
+                "$group": {
+                    "_id": None,
+                    "total_observations": {"$sum": 1},
+                    "average_fare": {"$avg": "$fare_amount"},
+                    "minimum_fare": {"$min": "$fare_amount"},
+                    "maximum_fare": {"$max": "$fare_amount"}
+                }
+            }
+        ]
+        overall_list = list(fare_collection.aggregate(overall_pipeline))
+        overall = overall_list[0] if overall_list else {
+            "total_observations": 0, "average_fare": 0, "minimum_fare": 0, "maximum_fare": 0
+        }
+        overall.pop("_id", None)
+        if overall["average_fare"]:
+            overall["average_fare"] = round(overall["average_fare"], 2)
+
+        # Price Trend by Travel Date
+        trend_pipeline = [
+            match_stage,
+            {
+                "$group": {
+                    "_id": "$travel_date",
+                    "average_fare": {"$avg": "$fare_amount"},
+                    "minimum_fare": {"$min": "$fare_amount"}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]
+        trend_list = list(fare_collection.aggregate(trend_pipeline))
+        price_trend = [
+            {
+                "travel_date": t["_id"],
+                "average_fare": round(t["average_fare"], 2),
+                "minimum_fare": t["minimum_fare"]
+            }
+            for t in trend_list if t["_id"]
+        ]
+
+        # Carrier Share
+        carrier_pipeline = [
+            match_stage,
+            {
+                "$group": {
+                    "_id": "$airline",
+                    "observations": {"$sum": 1},
+                    "average_fare": {"$avg": "$fare_amount"}
+                }
+            },
+            {"$sort": {"observations": -1}}
+        ]
+        carrier_list = list(fare_collection.aggregate(carrier_pipeline))
+        carrier_share = [
+            {
+                "airline": c["_id"] or "Unknown",
+                "observations": c["observations"],
+                "average_fare": round(c["average_fare"], 2)
+            }
+            for c in carrier_list
+        ]
+
+        # Top 5 Cheapest Flights
+        cheapest_pipeline = [
+            match_stage,
+            {"$sort": {"fare_amount": 1}},
+            {"$limit": 5},
+            {
+                "$project": {
+                    "_id": 0,
+                    "airline": 1,
+                    "fare_amount": 1,
+                    "travel_date": 1,
+                    "departure_time": 1,
+                    "flight_numbers": 1
+                }
+            }
+        ]
+        cheapest_flights = list(fare_collection.aggregate(cheapest_pipeline))
+
+        return {
+            "origin": origin.upper(),
+            "destination": destination.upper(),
+            "overall_stats": overall,
+            "price_trend": price_trend,
+            "carrier_share": carrier_share,
+            "cheapest_flights": cheapest_flights
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
