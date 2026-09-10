@@ -229,3 +229,29 @@ export interface RouteStatsResponse {
   carrier_share: RouteCarrierShare[];
   cheapest_flights: RouteCheapestFlight[];
 }
+
+
+export interface FarePredictionHorizon {
+  low: number;
+  high: number;
+  expected: number;
+}
+
+export interface BookingPredictionResponse {
+  status: 'success' | 'insufficient_data' | 'error';
+  message?: string;
+  route?: string;
+  current_fare?: number;
+  historical_median?: number;
+  predicted_fare?: {
+    '3_days'?: FarePredictionHorizon;
+    '7_days'?: FarePredictionHorizon;
+    '14_days'?: FarePredictionHorizon;
+  };
+  probability_of_increase?: number;
+  booking_score?: number;
+  recommendation?: string;
+  risk_level?: string;
+  model_reliability?: 'HIGH' | 'MODERATE' | 'LOW';
+  factors?: string[];
+}

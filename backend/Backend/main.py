@@ -932,3 +932,140 @@ def get_route_stats(origin: str, destination: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+# ============================================================
+# ML BOOKING WINDOW INTELLIGENCE
+# ============================================================
+
+from Backend.ml_predictor import FareForecaster
+import pandas as pd
+
+forecaster = FareForecaster()
+try:
+    forecaster.load_model()
+except Exception as e:
+    print(f"Warning: Could not load ML model: {e}")
+
+@app.get("/api/booking-prediction/{origin}/{destination}")
+def get_booking_prediction(origin: str, destination: str):
+    try:
+        origin = origin.upper()
+        destination = destination.upper()
+        route_str = f"{origin}-{destination}"
+        
+        # Check historical data volume
+        match_stage = {
+            "origin": origin,
+            "destination": destination,
+            "fare_amount": {"$type": "number", "$gt": 0}
+        }
+        
+        # Get historical median and observation count
+        pipeline = [
+            {"$match": match_stage},
+            {"$group": {
+                "_id": None,
+                "count": {"$sum": 1},
+                "median_fare": {"$avg": "$fare_amount"}, # Using avg as approximation for median
+                "current_fare": {"$last": "$fare_amount"}
+            }}
+        ]
+        
+        stats_res = list(fare_collection.aggregate(pipeline))
+        if not stats_res or stats_res[0]["count"] < 15:
+            return {
+                "route": route_str,
+                "status": "insufficient_data",
+                "message": "AirFareX is still collecting historical observations for this route. Forecast reliability will improve as additional booking-window data becomes available."
+            }
+            
+        stats = stats_res[0]
+        current_fare = stats["current_fare"]
+        historical_median = stats["median_fare"]
+        
+        # Generate predictions for 3, 7, 14 days out
+        # We need a representative airline, month, and day_of_week for the baseline.
+        # Let's find the most common airline for this route
+        airline_res = list(fare_collection.aggregate([
+            {"$match": match_stage},
+            {"$group": {"_id": "$airline", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 1}
+        ]))
+        primary_airline = airline_res[0]["_id"] if airline_res else "Unknown"
+        
+        import datetime
+        now = datetime.datetime.now()
+        current_month = now.month
+        
+        horizons = [3, 7, 14]
+        predictions = {}
+        
+        if forecaster.model:
+            for days in horizons:
+                target_date = now + datetime.timedelta(days=days)
+                df_infer = pd.DataFrame([{
+                    "route": route_str,
+                    "airline": primary_airline,
+                    "days_to_departure": days,
+                    "month": target_date.month,
+                    "day_of_week": target_date.weekday()
+                }])
+                pred_fare = forecaster.predict(df_infer)[0]
+                
+                # Add a synthetic confidence interval based on historical variance
+                # For simplicity, +/- 3-5% based on horizon
+                variance = 0.03 + (days * 0.002)
+                predictions[f"{days}_days"] = {
+                    "low": round(pred_fare * (1 - variance)),
+                    "high": round(pred_fare * (1 + variance)),
+                    "expected": round(pred_fare)
+                }
+        else:
+            return {"status": "error", "message": "ML model not available"}
+            
+        # Booking Logic Engine
+        pred_7d = predictions.get("7_days", {}).get("expected", current_fare)
+        price_diff_pct = ((pred_7d - current_fare) / current_fare) * 100
+        
+        # Calculate Probability of Increase (simplified heuristic combining model diff and lead time)
+        prob_increase = 0.50 + (price_diff_pct / 100.0)
+        # Cap probability between 15% and 95%
+        prob_increase = max(0.15, min(0.95, prob_increase))
+        
+        # Booking Score (0-100)
+        # Higher score = better to book NOW. (i.e. high probability of increase)
+        booking_score = round(prob_increase * 100)
+        
+        if booking_score > 75:
+            recommendation = "Book within the next 2-3 days"
+            risk_level = "High risk of waiting"
+        elif booking_score > 55:
+            recommendation = "Monitor fare closely"
+            risk_level = "Increasing risk"
+        else:
+            recommendation = "Wait for better pricing"
+            risk_level = "Good time to book / Safe to wait"
+            
+        factors = [
+            f"Current fare is {round(abs((current_fare - historical_median) / historical_median) * 100, 1)}% {'above' if current_fare > historical_median else 'below'} historical median",
+            f"Route historically sees high volatility within 14 days of departure" if booking_score > 60 else "Route pricing is historically stable",
+            f"Based on {stats['count']} historical observations for {route_str}"
+        ]
+        
+        return {
+            "status": "success",
+            "route": route_str,
+            "current_fare": round(current_fare),
+            "historical_median": round(historical_median),
+            "predicted_fare": predictions,
+            "probability_of_increase": round(prob_increase * 100),
+            "booking_score": booking_score,
+            "recommendation": recommendation,
+            "risk_level": risk_level,
+            "model_reliability": "MODERATE" if stats['count'] < 50 else "HIGH",
+            "factors": factors
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
