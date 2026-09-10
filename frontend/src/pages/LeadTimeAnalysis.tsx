@@ -118,7 +118,7 @@ export function LeadTimeAnalysis() {
                 contentStyle={{ backgroundColor: '#0B1728', borderRadius: '8px', border: '1px solid #24344A', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
                 itemStyle={{ color: '#F4F7FB' }}
                 labelFormatter={(label) => `T-${label} Days`}
-                formatter={(value: any, name: string) => [`₹${Number(value).toLocaleString('en-IN')}`, name]}
+                formatter={((value: any, name?: any) => [`₹${Number(value).toLocaleString('en-IN')}`, String(name ?? '')]) as any}
               />
               <Legend verticalAlign="top" height={36}/>
               <Line 
