@@ -215,7 +215,7 @@ export const FlightSearch: React.FC = () => {
         <p className="text-slate-400">Search real-time fares directly from SerpApi (Google Flights).</p>
       </div>
 
-      <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl overflow-visible">
+      <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl overflow-visible relative z-50">
         <CardContent className="p-6">
           <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 items-end">
             <div className="flex-1 w-full">

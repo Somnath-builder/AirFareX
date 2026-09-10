@@ -181,14 +181,14 @@ export function LeadTimeAnalysis() {
               columns={[
                 { header: 'Airline', accessor: 'airline' },
                 { 
-                  header: 'Avg Fare', 
+                  header: 'Advance Fare (14d+)', 
                   align: 'right', 
-                  accessor: (row) => `₹${Math.round(row.overall_average_fare).toLocaleString('en-IN')}` 
+                  accessor: (row) => row.advance_avg_fare ? `₹${Math.round(row.advance_avg_fare).toLocaleString('en-IN')}` : <span className="text-slate-500">N/A</span>
                 },
                 { 
                   header: '0-1 Day Fare', 
                   align: 'right', 
-                  accessor: (row) => <span className="text-emerald-400">₹{Math.round(row.last_minute_avg_fare).toLocaleString('en-IN')}</span> 
+                  accessor: (row) => row.last_minute_avg_fare ? <span className="text-emerald-400">₹{Math.round(row.last_minute_avg_fare).toLocaleString('en-IN')}</span> : <span className="text-slate-500">N/A</span>
                 },
                 { 
                   header: 'Surge', 
