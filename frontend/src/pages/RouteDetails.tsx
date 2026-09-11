@@ -140,7 +140,7 @@ export function RouteDetails() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
               <div className="bg-[#030712]/80 border border-[#24344A] p-4 hud-bracket">
                 <p className="text-[10px] font-mono text-[#718198] uppercase tracking-widest mb-1">Current Fare</p>
-                <p className="text-2xl font-bold text-white font-mono">₹{prediction.current_fare.toLocaleString('en-IN')}</p>
+                <p className="text-2xl font-bold text-white font-mono">₹{(prediction?.current_fare || 0).toLocaleString('en-IN')}</p>
               </div>
               
               <div className="bg-[#030712]/80 border border-[#24344A] p-4 hud-bracket">
@@ -149,8 +149,8 @@ export function RouteDetails() {
                 </p>
                 <div className="flex items-baseline gap-2">
                   <p className="text-2xl font-bold text-white font-mono">₹{(prediction.predicted_fare?.['7_days']?.expected || 0).toLocaleString('en-IN')}</p>
-                  <span className={`text-[10px] font-mono px-1 py-0.5 border ${(prediction.predicted_fare?.['7_days']?.expected || 0) > prediction.current_fare ? 'border-[#ec4899] text-[#ec4899]' : 'border-emerald-500 text-emerald-400'}`}>
-                    {(prediction.predicted_fare?.['7_days']?.expected || 0) > prediction.current_fare ? '▲' : '▼'}
+                  <span className={`text-[10px] font-mono px-1 py-0.5 border ${(prediction.predicted_fare?.['7_days']?.expected || 0) > (prediction?.current_fare || 0) ? 'border-[#ec4899] text-[#ec4899]' : 'border-emerald-500 text-emerald-400'}`}>
+                    {(prediction.predicted_fare?.['7_days']?.expected || 0) > (prediction?.current_fare || 0) ? '▲' : '▼'}
                   </span>
                 </div>
               </div>

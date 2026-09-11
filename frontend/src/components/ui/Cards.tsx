@@ -55,7 +55,7 @@ export function KpiCard({
   trend?: number;
   trendLabel?: string;
   inverseTrend?: boolean;
-  icon?: React.ElementType;
+  icon?: any;
 }) {
   return (
     <Card className="p-5">
