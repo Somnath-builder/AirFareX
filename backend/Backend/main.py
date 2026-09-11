@@ -282,8 +282,11 @@ def get_price_index(
     query = {}
 
     if route:
-
         query["route"] = route.upper()
+        query["type"] = "route"
+    else:
+        # Default to the overall national price index series
+        query["type"] = "overall"
 
     results = list(
         index_collection.find(
@@ -295,6 +298,16 @@ def get_price_index(
             ]
         )
     )
+
+    # Fallback if no docs found with type="overall" / type="route" (e.g. legacy records)
+    if not results:
+        legacy_query = {"route": route.upper()} if route else {"record_type": "overall"}
+        results = list(
+            index_collection.find(
+                legacy_query,
+                {"_id": 0}
+            ).sort([("period", 1)])
+        )
 
     return {
         "count": len(results),

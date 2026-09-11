@@ -206,21 +206,18 @@ def build_basket_periods(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Each basket item is:
-
-        route + travel_date
+    Each basket item represents a route corridor (e.g. DEL-BOM, AMD-BLR).
 
     For every collection period, its representative fare is the
-    median of all offers observed for that basket item.
+    median of all offers observed for that route.
 
-    This prevents one route with many duplicate airline offers from
-    dominating the index and makes the comparison between periods
-    more stable than averaging every individual fare.
+    This ensures that continuous daily scraping of future departures
+    consistently matches against the base period route corridors.
     """
 
     grouped = (
         df.groupby(
-            ["route", "travel_date", "collection_period"],
+            ["route", "collection_period"],
             as_index=False,
         )["fare"]
         .median()
@@ -236,25 +233,25 @@ def make_comparable_period(
     current_period: str,
 ) -> pd.DataFrame:
     """
-    Keep only route/travel-date basket items that exist in both
+    Keep route basket items that exist in both
     base and current collection periods.
     """
 
     base = basket[
         basket["collection_period"] == base_period
-    ][["route", "travel_date", "basket_median_fare"]].rename(
+    ][["route", "basket_median_fare"]].rename(
         columns={"basket_median_fare": "base_fare"}
     )
 
     current = basket[
         basket["collection_period"] == current_period
-    ][["route", "travel_date", "basket_median_fare"]].rename(
+    ][["route", "basket_median_fare"]].rename(
         columns={"basket_median_fare": "current_fare"}
     )
 
     comparable = base.merge(
         current,
-        on=["route", "travel_date"],
+        on=["route"],
         how="inner",
     )
 
@@ -264,6 +261,7 @@ def make_comparable_period(
     ].copy()
 
     return comparable
+
 
 
 # ---------------------------------------------------------------------
@@ -519,11 +517,14 @@ def calculate_index(
         else:
             change = 0.0
 
+        current_avg_fare = round(float(group["current_fare"].mean()), 2) if "current_fare" in group else 0.0
+
         overall_records.append(
             {
                 "period": period,
                 "base_period": base_period,
                 "index": round(overall_index, 4),
+                "average_fare": current_avg_fare,
                 "period_change_percent": round(change, 4),
                 "routes_used": len(
                     [
@@ -602,6 +603,7 @@ def save_price_index(
             "period": row["period"],
             "base_period": row["base_period"],
             "index": float(row["index"]),
+            "average_fare": float(row.get("average_fare", 0.0)),
             "period_change_percent": float(
                 row["period_change_percent"]
             ),
@@ -667,12 +669,12 @@ def main():
     basket = build_basket_periods(df)
 
     print(
-        f"Basket items: "
-        f"{basket[['route', 'travel_date']].drop_duplicates().shape[0]}"
+        f"Basket routes: "
+        f"{basket['route'].nunique()}"
     )
 
     print(
-        f"Route/travel-date/period basket records: {len(basket)}"
+        f"Route-period basket records: {len(basket)}"
     )
 
     route_index_df, overall_index_df, base_period = calculate_index(
