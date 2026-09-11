@@ -192,3 +192,66 @@ export interface LeadTimeResponse {
   available_routes: string[];
   available_airlines: string[];
 }
+
+
+export interface RouteOverallStats {
+  total_observations: number;
+  average_fare: number;
+  minimum_fare: number;
+  maximum_fare: number;
+}
+
+export interface RoutePriceTrend {
+  travel_date: string;
+  average_fare: number;
+  minimum_fare: number;
+}
+
+export interface RouteCarrierShare {
+  airline: string;
+  observations: number;
+  average_fare: number;
+}
+
+export interface RouteCheapestFlight {
+  airline: string;
+  fare_amount: number;
+  travel_date: string;
+  departure_time: string;
+  flight_numbers: string;
+}
+
+export interface RouteStatsResponse {
+  origin: string;
+  destination: string;
+  overall_stats: RouteOverallStats;
+  price_trend: RoutePriceTrend[];
+  carrier_share: RouteCarrierShare[];
+  cheapest_flights: RouteCheapestFlight[];
+}
+
+
+export interface FarePredictionHorizon {
+  low: number;
+  high: number;
+  expected: number;
+}
+
+export interface BookingPredictionResponse {
+  status: 'success' | 'insufficient_data' | 'error';
+  message?: string;
+  route?: string;
+  current_fare?: number;
+  historical_median?: number;
+  predicted_fare?: {
+    '3_days'?: FarePredictionHorizon;
+    '7_days'?: FarePredictionHorizon;
+    '14_days'?: FarePredictionHorizon;
+  };
+  probability_of_increase?: number;
+  booking_score?: number;
+  recommendation?: string;
+  risk_level?: string;
+  model_reliability?: 'HIGH' | 'MODERATE' | 'LOW';
+  factors?: string[];
+}

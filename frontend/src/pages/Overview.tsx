@@ -220,8 +220,8 @@ export function Overview() {
                       </div>
                     )
                   },
-                  { header: 'Type', accessor: (row) => <span className="text-xs px-2 py-1 bg-slate-800 rounded-full">{row.type}</span> },
-                  { header: 'Min Fare', align: 'right', accessor: (row) => `${(row.minimum_fare||0)} km` },
+                  { header: 'Distance', align: 'right', accessor: (row) => <span className="text-slate-300">{row.distance} km</span> },
+                  { header: 'Min Fare', align: 'right', accessor: (row) => `₹${(row.minimum_fare || 0).toLocaleString('en-IN')}` },
                   { header: 'Observations', align: 'right', accessor: (row) => (row.observation_count||0) },
                   { header: 'Avg Fare', align: 'right', accessor: (row) => `₹${(row.average_fare || 0).toLocaleString('en-IN')}` },
                 ]}
