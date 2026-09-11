@@ -8,16 +8,21 @@ import type {
   LeadTimeResponse,
   RouteStatsResponse,
   BookingPredictionResponse,
+  ChatRequest,
+  ChatResponse,
+  ConversationHistoryResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-async function fetchFromApi<T>(endpoint: string): Promise<T> {
+async function fetchFromApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        ...options?.headers,
       },
     });
     
@@ -93,6 +98,17 @@ export const airfareService = {
     
     // Live search endpoint which talks to SerpApi
     return fetchFromApi<SearchResponse>(`/api/search?${params.toString()}`);
+  },
+
+  async chatWithCopilot(request: ChatRequest): Promise<ChatResponse> {
+    return fetchFromApi<ChatResponse>('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify(request)
+    });
+  },
+
+  async getChatHistory(conversationId: string): Promise<ConversationHistoryResponse> {
+    return fetchFromApi<ConversationHistoryResponse>(`/api/chat/history/${conversationId}`);
   },
 };
 

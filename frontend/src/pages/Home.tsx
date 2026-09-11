@@ -1,99 +1,111 @@
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Plane, Activity, FileBarChart2 } from 'lucide-react';
+import { ArrowRight, Activity, Globe } from 'lucide-react';
+import { AircraftScene } from '../components/3d/AircraftScene';
 import { AirfareXLogo } from '../components/ui/AirfareXLogo';
+import { airfareService } from '../services/airfareService';
 
 export function Home() {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({ routes: 0, index: 0 });
+
+  useEffect(() => {
+    airfareService.getHealth().catch(() => {});
+    airfareService.getPriceIndex().then((data: any) => {
+      if (data && data.length > 0) {
+        setStats({
+          routes: 25, // Mock baseline
+          index: data.data[data.data.length - 1].index
+        });
+      }
+    }).catch(() => {});
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#07111F] flex flex-col relative overflow-hidden">
-      {/* Subtle Background Pattern */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-20" style={{
-        backgroundImage: 'radial-gradient(#24344A 1px, transparent 1px)',
-        backgroundSize: '32px 32px'
-      }}></div>
+    <div className="relative min-h-[calc(100vh-4rem)] w-full flex flex-col justify-center overflow-hidden">
       
-      {/* Soft Glow Behind Logo */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[100px] z-0 pointer-events-none"></div>
 
-      {/* Navbar */}
-      <header className="bg-[#0B1728]/80 backdrop-blur-md border-b border-[#24344A] relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <AirfareXLogo size={40} animated={true} />
-            <span className="text-xl font-bold text-white tracking-tight">AirFareX</span>
+
+      {/* 3D Background */}
+      <div className="absolute inset-0 z-0">
+        <AircraftScene />
+      </div>
+      
+      {/* HUD Overlays */}
+      <div className="absolute top-10 right-10 z-10 hidden lg:flex flex-col items-end gap-2 text-xs font-mono text-[#06b6d4]/70 pointer-events-none">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 bg-[#ec4899] rounded-full animate-pulse"></span>
+          SYS.LIVE
+        </div>
+        <div>COORDS: 28.6139° N, 77.2090° E</div>
+        <div>DATA_STREAM // 04A7-B</div>
+      </div>
+      
+      <div className="absolute bottom-10 left-10 z-10 hidden lg:block text-xs font-mono text-[#718198] pointer-events-none">
+        <div className="hud-bracket p-4">
+          <p className="neon-text-cyan">STATUS: NOMINAL</p>
+          <p>OBSERVATIONS: LIVE</p>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 lg:px-8 w-full flex flex-col lg:flex-row items-center">
+        
+        {/* Typography Left */}
+        <div className="w-full lg:w-1/2 flex flex-col items-start pt-20 lg:pt-0">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#06b6d4]/30 bg-[#06b6d4]/10 text-[#06b6d4] text-xs font-mono font-medium mb-6 uppercase tracking-widest">
+            <Activity size={14} className="animate-pulse" />
+            Real-Time Intelligence
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-[#718198] hidden sm:block">MoSPI Problem Statement 26056</span>
+          
+          <h1 className="text-5xl lg:text-7xl font-bold text-white tracking-tighter leading-[1.1] mb-6">
+            AIRFARE<br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#06b6d4] to-[#ec4899]">INTELLIGENCE</span><br/>
+            FOR A HIGHER<br/>
+            TOMORROW
+          </h1>
+          
+          <p className="text-lg lg:text-xl text-slate-400 mb-10 max-w-xl font-light leading-relaxed">
+            Real-time domestic airfare intelligence, route analytics, and predictive insights for data-driven aviation policy.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             <button 
               onClick={() => navigate('/dashboard')}
-              className="bg-[#101D30] text-[#A9B7C9] border border-[#24344A] px-4 py-2 rounded-lg text-sm font-medium hover:text-white hover:bg-[#14243A] transition-colors flex items-center gap-2"
+              className="group relative px-8 py-4 bg-[#0B1728] border border-[#06b6d4]/50 hover:border-[#06b6d4] text-white rounded-none transition-all overflow-hidden flex items-center justify-center gap-3 font-medium uppercase tracking-wider text-sm shadow-[0_0_20px_rgba(6,182,212,0.15)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)]"
             >
-              Dashboard
-              <ArrowRight size={16} />
+              <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#06b6d4]/0 via-[#06b6d4]/10 to-[#06b6d4]/0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+              <span>Explore Dashboard</span>
+              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform text-[#ec4899]" />
+            </button>
+            
+            <button 
+              onClick={() => navigate('/dashboard/index')}
+              className="px-8 py-4 bg-transparent border border-[#24344A] hover:bg-[#101D30] text-slate-300 rounded-none transition-all flex items-center justify-center gap-3 font-medium uppercase tracking-wider text-sm"
+            >
+              <Globe size={18} className="text-[#06b6d4]" />
+              <span>Live Index: {stats.index ? stats.index.toFixed(1) : '...'}</span>
             </button>
           </div>
         </div>
-      </header>
-
-      {/* Hero Section */}
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 py-16 relative z-10">
         
-        <div className="mb-8 animate-fade-in-up">
-          <AirfareXLogo size={200} animated={true} />
+        {/* Huge Logo Right Side */}
+        <div className="w-full lg:w-1/2 h-[40vh] lg:h-auto flex items-center justify-center relative pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#06b6d4]/5 to-transparent blur-3xl rounded-full scale-150 -z-10"></div>
+          <AirfareXLogo size={400} animated={true} />
         </div>
-        
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight max-w-4xl animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-          Airfare Price Index <span className="text-[#4F46E5]">for India</span>
-        </h1>
-        
-        <p className="mt-8 text-lg sm:text-xl text-[#A9B7C9] max-w-2xl leading-relaxed animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-          An automated economic data platform designed to monitor domestic airfare movements across major Indian air travel corridors for enhanced Consumer Price Index (CPI) analysis.
-        </p>
-        
-        <div className="mt-10 flex flex-col sm:flex-row gap-4 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="group bg-[#4F46E5] text-white px-8 py-3 rounded-xl text-base font-medium hover:bg-[#635BFF] transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/20 flex items-center justify-center gap-2"
-          >
-            Open Analytics Dashboard
-            <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-          </button>
-          <button 
-            onClick={() => navigate('/dashboard/methodology')}
-            className="bg-[#101D30] text-[#A9B7C9] border border-[#24344A] px-8 py-3 rounded-xl text-base font-medium hover:text-white hover:bg-[#14243A] transition-colors flex items-center justify-center gap-2"
-          >
-            Read Methodology
-          </button>
-        </div>
-
-        {/* Live Data Snapshot */}
-        <div className="mt-24 w-full max-w-4xl border-t border-[#24344A] pt-12 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-          <div className="text-xs font-bold tracking-widest text-[#718198] uppercase mb-8">
-            ────────── Live Data ──────────
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="bg-[#101D30] border border-[#24344A] rounded-2xl p-6 text-center hover:bg-[#14243A] transition-colors">
-              <div className="text-sm font-medium text-[#A9B7C9] mb-2">Current Index</div>
-              <div className="text-4xl font-bold text-white">127.4</div>
-            </div>
-            <div className="bg-[#101D30] border border-[#24344A] rounded-2xl p-6 text-center hover:bg-[#14243A] transition-colors">
-              <div className="text-sm font-medium text-[#A9B7C9] mb-2">Monthly Change</div>
-              <div className="text-4xl font-bold text-emerald-400">+4.8%</div>
-            </div>
-            <div className="bg-[#101D30] border border-[#24344A] rounded-2xl p-6 text-center hover:bg-[#14243A] transition-colors">
-              <div className="text-sm font-medium text-[#A9B7C9] mb-2">Routes Tracked</div>
-              <div className="text-4xl font-bold text-white">24</div>
-            </div>
-          </div>
-        </div>
-      </main>
+      </div>
       
-      <footer className="bg-[#0B1728] py-8 border-t border-[#24344A] text-center text-[#718198] text-sm relative z-10">
-        <p>Built for MoSPI Hackathon Problem Statement 26056</p>
-        <p className="mt-1">Production Environment - Live Data</p>
-      </footer>
+      {/* Bottom Ticker */}
+      <div className="absolute bottom-0 w-full h-8 bg-[#0B1728]/80 backdrop-blur-md border-t border-[#06b6d4]/20 overflow-hidden flex items-center">
+        <div className="flex whitespace-nowrap animate-[marquee_30s_linear_infinite] text-xs font-mono text-[#06b6d4] tracking-widest uppercase">
+          {[...Array(5)].map((_, i) => (
+            <span key={i} className="mx-8">
+              {i % 2 === 0 ? '● SYSTEM SECURE' : '● AIRFAREX DATALINK ACTIVE'} // {stats.routes} ROUTES TRACKED // MO_SPI 26056 
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
-

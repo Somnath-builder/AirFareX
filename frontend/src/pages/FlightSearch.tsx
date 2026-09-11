@@ -1,113 +1,28 @@
-import React, { useState } from 'react';
-import { Search, PlaneTakeoff, PlaneLanding, Calendar, Loader2, ArrowRight, Clock, MapPin, IndianRupee } from 'lucide-react';
+﻿import React, { useState } from 'react';
+import { Search, PlaneTakeoff, ArrowRight, Calendar, Loader2, Radar, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { airfareService } from '../services/airfareService';
-import type { SearchResponse, SearchFlightOption, FlightSegment } from '../types';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Cards';
-import clsx from 'clsx';
+import type { SearchResponse, SearchFlightOption } from '../types';
+import { AirportAutocomplete } from '../components/ui/AirportAutocomplete';
 
 
-const AIRPORTS = [
-  { code: 'DEL', city: 'Delhi' },
-  { code: 'BOM', city: 'Mumbai' },
-  { code: 'BLR', city: 'Bengaluru' },
-  { code: 'CCU', city: 'Kolkata' },
-  { code: 'HYD', city: 'Hyderabad' },
-  { code: 'MAA', city: 'Chennai' },
-  { code: 'AMD', city: 'Ahmedabad' },
-  { code: 'PNQ', city: 'Pune' },
-  { code: 'GOI', city: 'Goa (Dabolim)' },
-  { code: 'GOX', city: 'Goa (Mopa)' },
-  { code: 'JAI', city: 'Jaipur' },
-  { code: 'LKO', city: 'Lucknow' },
-  { code: 'COK', city: 'Kochi' },
-  { code: 'PAT', city: 'Patna' },
-  { code: 'BBI', city: 'Bhubaneswar' },
-  { code: 'GAU', city: 'Guwahati' },
-  { code: 'TRV', city: 'Thiruvananthapuram' },
-  { code: 'ATQ', city: 'Amritsar' },
-  { code: 'IXC', city: 'Chandigarh' },
-  { code: 'SXR', city: 'Srinagar' },
-];
 
-function AirportAutocomplete({ value, onChange, placeholder }: { value: string, onChange: (val: string) => void, placeholder: string }) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [inputValue, setInputValue] = React.useState(value);
-  const wrapperRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    setInputValue(value);
-  }, [value]);
-
-  React.useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const filteredAirports = AIRPORTS.filter(
-    (a) => a.city.toLowerCase().includes(inputValue.toLowerCase()) || a.code.toLowerCase().includes(inputValue.toLowerCase())
-  );
-
-  return (
-    <div ref={wrapperRef} className="relative w-full">
-      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-      <input
-        type="text"
-        value={inputValue}
-        onChange={(e) => {
-          setInputValue(e.target.value);
-          onChange(e.target.value);
-          setIsOpen(true);
-        }}
-        onFocus={() => setIsOpen(true)}
-        placeholder={placeholder}
-        className="w-full bg-slate-950 border border-slate-800 rounded-lg py-3 pl-10 pr-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all"
-      />
-      {isOpen && filteredAirports.length > 0 && (
-        <ul className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-800 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-          {filteredAirports.map((airport) => (
-            <li
-              key={airport.code}
-              className="px-4 py-2 hover:bg-slate-800 cursor-pointer text-slate-200 flex justify-between items-center"
-              onClick={() => {
-                const finalValue = airport.code;
-                setInputValue(finalValue);
-                onChange(finalValue);
-                setIsOpen(false);
-              }}
-            >
-              <span>{airport.city}({airport.code})</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-
-export const FlightSearch: React.FC = () => {
+export function FlightSearch() {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [travelDate, setTravelDate] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (origin.length !== 3 || destination.length !== 3) {
-      setError("Please enter valid 3-letter airport codes (e.g., DEL, BOM).");
+    if (!origin || !destination) {
+      setError("Please input origin and destination routing nodes.");
       return;
     }
-    
     if (!travelDate) {
-      setError("Please select a travel date.");
+      setError("Please input a valid temporal sequence (travel date).");
       return;
     }
 
@@ -119,7 +34,7 @@ export const FlightSearch: React.FC = () => {
       const data = await airfareService.searchFlights(origin, destination, travelDate);
       setResults(data);
     } catch (err: any) {
-      setError(err.message || "Failed to fetch flights. Ensure the backend is running and SERPAPI_API_KEY is configured.");
+      setError(err.message || "Failed to establish uplink with global distribution system (SerpApi).");
     } finally {
       setLoading(false);
     }
@@ -128,13 +43,12 @@ export const FlightSearch: React.FC = () => {
   const formatDuration = (minutes: number) => {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
-    return `${h}h ${m}m`;
+    return `${h}H ${m}M`;
   };
 
   const FlightCard = ({ flight, isCheapest }: { flight: SearchFlightOption, isCheapest?: boolean }) => {
-    // Determine primary airline from the first segment
-    const primaryAirline = flight.flights[0]?.airline || "Unknown Airline";
-    const flightNumber = flight.flights[0]?.flight_number || "";
+    const primaryAirline = flight.flights[0]?.airline || "UNKNOWN CARRIER";
+    const flightNumber = flight.flights[0]?.flight_number || "XX000";
     
     const departure = flight.flights[0]?.departure_airport;
     const arrival = flight.flights[flight.flights.length - 1]?.arrival_airport;
@@ -142,131 +56,149 @@ export const FlightSearch: React.FC = () => {
     const extractTime = (timeStr?: string) => timeStr ? timeStr.split(' ')[1] : "--:--";
 
     return (
-      <div className={clsx(
-        "relative rounded-xl border p-6 transition-all duration-300",
+      <div className={`p-5 border relative overflow-hidden group transition-all duration-300 ${
         isCheapest 
-          ? "border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)]" 
-          : "border-slate-800 bg-slate-900/50 hover:border-slate-700"
-      )}>
+          ? 'bg-[#ec4899]/5 border-[#ec4899]/50 shadow-[inset_0_0_20px_rgba(236,72,153,0.1)]' 
+          : 'bg-[#030712]/80 border-[#24344A] hover:border-[#06b6d4]/50'
+      }`}>
+        {/* HUD scanline effect */}
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:animate-[shimmer_2s_infinite]"></div>
+        
         {isCheapest && (
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-500 text-slate-950 text-xs font-bold rounded-full shadow-lg">
-            Cheapest Option
+          <div className="absolute top-0 right-0 px-3 py-1 bg-[#ec4899]/20 border-b border-l border-[#ec4899]/50 text-[#ec4899] text-[10px] font-mono tracking-widest uppercase flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-[#ec4899] rounded-full animate-ping"></span>
+            OPTIMAL ROUTE
           </div>
         )}
 
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mt-2">
           
           {/* Airline Info */}
           <div className="flex items-center gap-4 min-w-[200px]">
-            <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shadow-inner">
-              <PlaneTakeoff className={clsx("w-6 h-6", isCheapest ? "text-emerald-400" : "text-sky-400")} />
+            <div className={`w-12 h-12 flex items-center justify-center border ${isCheapest ? 'border-[#ec4899]/30 bg-[#ec4899]/10' : 'border-[#06b6d4]/30 bg-[#06b6d4]/10'}`}>
+              <PlaneTakeoff size={20} className={isCheapest ? "text-[#ec4899]" : "text-[#06b6d4]"} />
             </div>
             <div>
-              <p className="font-semibold text-slate-200">{primaryAirline}</p>
-              <p className="text-sm text-slate-500">{flightNumber}</p>
+              <p className="font-mono font-bold text-white uppercase tracking-wider">{primaryAirline}</p>
+              <p className="font-mono text-xs text-[#718198]">{flightNumber}</p>
             </div>
           </div>
 
           {/* Flight Path */}
-          <div className="flex-1 flex items-center justify-center w-full">
-            <div className="flex items-center gap-4">
+          <div className="flex-1 flex items-center justify-center w-full font-mono">
+            <div className="flex items-center gap-6">
               <div className="text-right">
-                <p className="text-2xl font-light text-slate-200">{extractTime(departure?.time)}</p>
-                <p className="text-sm text-slate-500 font-medium">{departure?.id}</p>
+                <p className="text-2xl text-white">{extractTime(departure?.time)}</p>
+                <p className="text-xs text-[#06b6d4] tracking-widest">{departure?.id}</p>
               </div>
               
-              <div className="flex flex-col items-center px-4">
-                <div className="flex items-center gap-2 text-slate-600">
-                  <div className="h-px w-8 bg-slate-700"></div>
-                  <ArrowRight className="w-4 h-4" />
-                  <div className="h-px w-8 bg-slate-700"></div>
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-2 text-[#24344A]">
+                  <div className={`h-px w-12 ${isCheapest ? 'bg-[#ec4899]/50' : 'bg-[#06b6d4]/50'}`}></div>
+                  <ArrowRight size={14} className={isCheapest ? 'text-[#ec4899]' : 'text-[#06b6d4]'} />
+                  <div className={`h-px w-12 ${isCheapest ? 'bg-[#ec4899]/50' : 'bg-[#06b6d4]/50'}`}></div>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">{formatDuration(flight.total_duration_minutes)}</p>
-                <p className="text-xs text-slate-500">{flight.stops === 0 ? 'Non-stop' : `${flight.stops} Stop(s)`}</p>
+                <p className="text-[10px] text-[#A9B7C9] mt-2 tracking-widest">{formatDuration(flight.total_duration_minutes)}</p>
+                <p className="text-[10px] text-[#718198] tracking-widest">{flight.stops === 0 ? 'DIRECT' : `${flight.stops} HOPS`}</p>
               </div>
 
               <div className="text-left">
-                <p className="text-2xl font-light text-slate-200">{extractTime(arrival?.time)}</p>
-                <p className="text-sm text-slate-500 font-medium">{arrival?.id}</p>
+                <p className="text-2xl text-white">{extractTime(arrival?.time)}</p>
+                <p className="text-xs text-[#06b6d4] tracking-widest">{arrival?.id}</p>
               </div>
             </div>
           </div>
 
           {/* Price */}
           <div className="flex flex-col items-end min-w-[150px]">
-            <p className="text-sm text-slate-400 mb-1">Total Fare</p>
-            <p className={clsx(
-              "text-3xl font-light",
-              isCheapest ? "text-emerald-400" : "text-sky-400"
-            )}>
-              ₹{flight.price.toLocaleString()}
+            <p className="text-[10px] font-mono text-[#718198] uppercase tracking-widest mb-1">Total Fare</p>
+            <p className={`text-3xl font-mono font-bold tracking-tighter ${isCheapest ? "text-[#ec4899]" : "text-[#06b6d4]"}`}>
+              ₹{flight.price.toLocaleString('en-IN')}
             </p>
           </div>
-
         </div>
       </div>
     );
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-light tracking-tight text-slate-100">Live Flight Search</h1>
-        <p className="text-slate-400">Search real-time fares directly from SerpApi (Google Flights).</p>
+    <div className="max-w-6xl mx-auto space-y-6 relative z-10 pb-12">
+      {/* Header */}
+      <div className="border-b border-[#24344A] pb-4">
+        <div className="inline-flex items-center gap-2 text-[#06b6d4] text-[10px] font-mono tracking-widest uppercase mb-2">
+          <Radar size={14} className="animate-spin-slow" />
+          Live Network Scanner
+        </div>
+        <h1 className="text-3xl font-sans font-bold text-white tracking-tighter uppercase">Query Global Distribution</h1>
+        <p className="text-[#A9B7C9] font-mono text-xs mt-2">Intercepting real-time itineraries via SerpApi datalink.</p>
       </div>
 
-      <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl overflow-visible relative z-50">
-        <CardContent className="p-6">
-          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 items-end">
-            <div className="flex-1 w-full">
-              <label className="block text-sm font-medium text-slate-400 mb-2">Origin</label>
-              <AirportAutocomplete value={origin} onChange={(val) => setOrigin(val.toUpperCase())} placeholder="DEL (e.g. Delhi)" />
+      {/* Query Form */}
+      <div className="glass-panel hud-bracket p-6 relative z-[100]">
+        <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end relative z-10">
+          
+          <div className="w-full">
+            <label className="block text-[10px] font-mono text-[#718198] uppercase tracking-widest mb-2">Origin Node</label>
+            {/* Custom AirportAutocomplete needs to be styled inside its component, but we assume it accepts classes or inherits */}
+            <div className="relative border border-[#24344A] bg-[#030712] focus-within:border-[#06b6d4] transition-colors">
+              <AirportAutocomplete value={origin} onChange={(val) => setOrigin(val.toUpperCase())} placeholder="e.g. DEL" />
             </div>
+          </div>
 
-            <div className="flex-1 w-full">
-              <label className="block text-sm font-medium text-slate-400 mb-2">Destination</label>
-              <AirportAutocomplete value={destination} onChange={(val) => setDestination(val.toUpperCase())} placeholder="BOM (e.g. Mumbai)" />
+          <div className="w-full">
+            <label className="block text-[10px] font-mono text-[#718198] uppercase tracking-widest mb-2">Target Node</label>
+            <div className="relative border border-[#24344A] bg-[#030712] focus-within:border-[#06b6d4] transition-colors">
+              <AirportAutocomplete value={destination} onChange={(val) => setDestination(val.toUpperCase())} placeholder="e.g. BOM" />
             </div>
+          </div>
 
-            <div className="flex-1 w-full">
-              <label className="block text-sm font-medium text-slate-400 mb-2">Travel Date</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                <input 
-                  type="date" 
-                  value={travelDate}
-                  onChange={(e) => setTravelDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg py-3 pl-10 pr-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all [color-scheme:dark]"
-                />
+          <div className="w-full">
+            <label className="block text-[10px] font-mono text-[#718198] uppercase tracking-widest mb-2">Temporal Sequence</label>
+            <div className="relative border border-[#24344A] bg-[#030712] focus-within:border-[#06b6d4] transition-colors">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Calendar size={14} className="text-[#718198]" />
               </div>
+              <input 
+                type="date" 
+                value={travelDate}
+                onChange={(e) => setTravelDate(e.target.value)}
+                className="w-full bg-transparent py-2.5 pl-10 pr-4 text-sm font-mono text-white placeholder:text-[#24344A] focus:outline-none [color-scheme:dark]"
+              />
             </div>
+          </div>
 
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full md:w-auto px-8 py-3 bg-sky-500 hover:bg-sky-400 text-slate-950 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(14,165,233,0.3)] hover:shadow-[0_0_25px_rgba(14,165,233,0.5)]"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-              {loading ? "Searching..." : "Search"}
-            </button>
-          </form>
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full h-[42px] bg-[#06b6d4]/10 border border-[#06b6d4]/50 text-[#06b6d4] font-mono text-xs tracking-widest uppercase hover:bg-[#06b6d4]/20 hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+            {loading ? "SCANNING..." : "INITIATE SCAN"}
+          </button>
+        </form>
 
-          {error && (
-            <div className="mt-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <p>{error}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {error && (
+          <div className="mt-6 p-4 border border-[#ec4899] bg-[#ec4899]/5 flex items-start gap-3">
+            <AlertTriangle className="text-[#ec4899] shrink-0" size={18} />
+            <p className="text-sm font-mono text-[#ec4899]">{error}</p>
+          </div>
+        )}
+      </div>
 
+      {/* Results */}
       {results && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-medium text-slate-200">
-              Found {results.count} flights for <span className="text-sky-400">{results.origin}</span> to <span className="text-sky-400">{results.destination}</span>
-            </h2>
-            <div className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-400">
+          <div className="flex items-end justify-between border-b border-[#24344A] pb-3">
+            <div>
+              <h2 className="text-lg font-mono font-bold text-white uppercase">
+                <span className="text-[#06b6d4]">{results.count}</span> VECTORS IDENTIFIED
+              </h2>
+              <p className="text-xs font-mono text-[#718198]">
+                {results.origin} <span className="text-[#06b6d4]">→</span> {results.destination}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 px-2 py-1 bg-[#030712] border border-[#24344A] text-[10px] font-mono text-[#A9B7C9] uppercase">
+              <ShieldCheck size={12} className="text-emerald-500" />
               Source: {results.source}
             </div>
           </div>
@@ -284,6 +216,4 @@ export const FlightSearch: React.FC = () => {
       )}
     </div>
   );
-};
-
-
+}

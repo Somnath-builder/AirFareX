@@ -255,3 +255,35 @@ export interface BookingPredictionResponse {
   model_reliability?: 'HIGH' | 'MODERATE' | 'LOW';
   factors?: string[];
 }
+
+
+export interface ChatRequest {
+  message: string;
+  conversation_id?: string;
+}
+
+export interface ChatResponse {
+  conversation_id: string;
+  intent: string;
+  message: string;
+  data?: any;
+  tool_used?: string;
+  timestamp: string;
+  context?: any;
+}
+
+export interface ChatMessageRecord {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: string;
+  tool_used?: string;
+  data?: any;
+}
+
+export interface ConversationHistoryResponse {
+  conversation_id: string;
+  created_at: string;
+  updated_at: string;
+  context: any;
+  messages: ChatMessageRecord[];
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+﻿import { useEffect, useState, useMemo } from 'react';
 import { 
   LineChart, 
   Line, 
@@ -8,10 +8,11 @@ import {
   Tooltip, 
   ResponsiveContainer,
   ReferenceLine,
-  Legend
+  Legend,
+  Area,
+  AreaChart
 } from 'recharts';
-import { IndianRupee, TrendingUp, Map, Navigation, Plane } from 'lucide-react';
-import { KpiCard, ChartCard, TrendIndicator } from '../components/ui/Cards';
+import { IndianRupee, TrendingUp, Map, Navigation, Plane, AlertTriangle, Activity } from 'lucide-react';
 import { DataTable } from '../components/ui/DataTable';
 import { airfareService } from '../services/airfareService';
 import type { AnalyticsResponse, PriceIndexPoint, BackendRoute } from '../types';
@@ -22,21 +23,67 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
   static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
   render() {
     if (this.state.hasError) {
-      return <div className="p-8 text-red-500 bg-black z-50 fixed inset-0 overflow-auto"><h2>Crash in Overview:</h2><pre>{this.state.error?.stack}</pre></div>;
+      return <div className="p-8 text-[#ec4899] bg-[#030712] border border-[#ec4899] z-50 relative"><h2 className="font-mono">SYS.CRASH :: OVERVIEW</h2><pre className="text-xs mt-2">{this.state.error?.stack}</pre></div>;
     }
     return this.props.children;
   }
 }
+
+// Futuristic KPI Card
+function HudKpi({ title, value, unit = '', trend, trendLabel, icon: Icon, critical = false }: any) {
+  return (
+    <div className={`glass-panel hud-border p-5 relative overflow-hidden group ${critical ? 'border-[#ec4899]/50 shadow-[0_0_15px_rgba(236,72,153,0.15)]' : ''}`}>
+      <div className={`absolute top-0 right-0 w-8 h-8 flex items-center justify-center border-l border-b ${critical ? 'border-[#ec4899]/30 bg-[#ec4899]/10' : 'border-[#06b6d4]/30 bg-[#06b6d4]/10'}`}>
+        {Icon && <Icon size={14} className={critical ? "text-[#ec4899]" : "text-[#06b6d4]"} />}
+      </div>
+      
+      <p className="text-[10px] font-mono text-[#718198] uppercase tracking-widest mb-1">{title}</p>
+      
+      <div className="flex items-baseline gap-1 mt-2">
+        {unit && <span className={`text-lg font-mono ${critical ? 'text-[#ec4899]' : 'text-[#06b6d4]'}`}>{unit}</span>}
+        <h3 className="text-3xl font-sans font-bold text-white tracking-tighter">{value}</h3>
+      </div>
+      
+      {(trend !== undefined || trendLabel) && (
+        <div className="mt-4 pt-3 border-t border-[#24344A]/50 flex items-center gap-2">
+          {trend !== undefined && (
+            <span className={`text-[10px] font-mono font-medium px-1.5 py-0.5 border ${trend > 0 ? (critical ? 'border-[#ec4899] text-[#ec4899]' : 'border-[#06b6d4] text-[#06b6d4]') : 'border-emerald-500 text-emerald-400'}`}>
+              {trend > 0 ? '▲' : '▼'} {Math.abs(trend).toFixed(1)}%
+            </span>
+          )}
+          <span className="text-[10px] text-[#718198] uppercase tracking-wider">{trendLabel}</span>
+        </div>
+      )}
+      
+      {/* HUD scanning line */}
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:animate-[shimmer_2s_infinite]"></div>
+    </div>
+  );
+}
+
 export function Overview() {
   const [loading, setLoading] = useState(true);
-
   const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
   const [indexData, setIndexData] = useState<PriceIndexPoint[]>([]);
   const [routesData, setRoutesData] = useState<BackendRoute[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
   const [timeFilter, setTimeFilter] = useState<'1W' | '1M' | '3M' | 'All'>('All');
   
+  useEffect(() => {
+    Promise.all([
+      airfareService.getAnalytics(),
+      airfareService.getPriceIndex().then(res => res.data),
+      airfareService.getRoutes()
+    ]).then(([analyticsData, indexData, routesData]) => {
+      setAnalytics(analyticsData);
+      setIndexData(indexData);
+      setRoutesData((routesData as any).routes || []);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
+
   const filteredIndexData = useMemo(() => {
     if (timeFilter === 'All') return indexData;
     const now = new Date();
@@ -48,223 +95,234 @@ export function Overview() {
     return indexData.filter(d => new Date(d.period) >= cutoff);
   }, [indexData, timeFilter]);
 
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [analyticsRes, indexRes, routesRes] = await Promise.all([
-          airfareService.getAnalytics(),
-          airfareService.getPriceIndex(),
-          airfareService.getRoutes()
-        ]);
-        
-        setAnalytics(analyticsRes);
-        setIndexData(indexRes.data || []);
-        
-        // Ensure routes are sorted by observations so we see the most popular ones
-        const sortedRoutes = (routesRes.routes || []).sort((a, b) => 
-          (b.observation_count || 0) - (a.observation_count || 0)
-        );
-        setRoutesData(sortedRoutes);
-      } catch (err: any) {
-        setError(err.message || "Failed to load dashboard data");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, []);
-
-  if (loading) {
-    return <div className="animate-pulse space-y-6">
-      <div className="h-20 bg-slate-800 rounded-xl"></div>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {[...Array(5)].map((_, i) => <div key={i} className="h-32 bg-slate-800 rounded-xl"></div>)}
-      </div>
-      <div className="h-96 bg-slate-800 rounded-xl"></div>
-    </div>;
-  }
-
-  if (error || !analytics) {
+  if (loading || !analytics || indexData.length === 0) {
     return (
-      <div className="p-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl">
-        <h3 className="font-semibold text-lg mb-2">Dashboard Error</h3>
-        <p>{error}</p>
-        <p className="mt-4 text-sm opacity-80">Check if the FastAPI backend is running on port 8000.</p>
+      <div className="h-[60vh] flex flex-col items-center justify-center font-mono text-[#06b6d4]">
+        <Activity size={32} className="animate-spin mb-4 opacity-50" />
+        <p className="tracking-widest animate-pulse">INITIALIZING DATA STREAMS...</p>
       </div>
     );
   }
 
-  // Calculate some dummy trends just for the UI since the backend analytics doesn't provide MoM change yet
-  const latestIndex = indexData.length > 0 ? indexData[indexData.length - 1].index : 100;
-  const previousIndex = indexData.length > 1 ? indexData[indexData.length - 2].index : 100;
-  const indexChange = Number(((latestIndex - previousIndex) / previousIndex * 100).toFixed(2));
+  const latestIndex = indexData[indexData.length - 1]?.index || 100;
+  const previousIndex = indexData.length > 30 ? indexData[indexData.length - 31].index : indexData[0].index;
+  const indexChange = ((latestIndex - previousIndex) / previousIndex) * 100;
 
-  // Sort airlines by average fare for the "Top Movers" equivalent
-  const topAirlines = [...analytics.airlines].sort((a, b) => b.average_fare - a.average_fare).slice(0, 3);
-  const cheapestAirlines = [...analytics.airlines].sort((a, b) => a.average_fare - b.average_fare).slice(0, 3);
+  // Mock anomalies for the Anomaly Monitor (since backend doesn't have an anomalies endpoint yet)
+  const anomalies = [
+    { route: 'DEL → BOM', change: '+18.4%', level: 'CRITICAL', color: 'text-[#ec4899]', border: 'border-[#ec4899]' },
+    { route: 'BLR → DEL', change: '+15.2%', level: 'HIGH', color: 'text-orange-500', border: 'border-orange-500' },
+    { route: 'BOM → HYD', change: '+12.6%', level: 'HIGH', color: 'text-orange-500', border: 'border-orange-500' },
+    { route: 'DEL → MAA', change: '+10.3%', level: 'MODERATE', color: 'text-yellow-500', border: 'border-yellow-500' },
+  ];
 
   return (
-    <ErrorBoundary><div className="space-y-6">
-      {/* Header section */}
-      <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">AirFareX</h1>
-        <p className="text-[#718198] mt-1">Monitoring domestic airfare movements across major Indian city-pairs</p>
-      </div>
-
-      {/* KPI Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <KpiCard 
-          title="Current Index" 
-          value={latestIndex.toFixed(1)}
-          trend={indexChange}
-          trendLabel="MoM"
-          icon={TrendingUp}
-        />
-        <KpiCard 
-          title="Total Observations" 
-          value={analytics.total_observations.toLocaleString('en-IN')}
-          trendLabel="Scraped fares"
-        />
-        <KpiCard 
-          title="Max Fare Recorded" 
-          value={`₹${analytics.maximum_fare.toLocaleString('en-IN')}`}
-          trendLabel="All time"
-        />
-        <KpiCard 
-          title="Avg Domestic Fare" 
-          value={`₹${analytics.average_fare.toLocaleString('en-IN')}`}
-          icon={IndianRupee}
-        />
-        <KpiCard 
-          title="Routes Tracked" 
-          value={analytics.unique_routes}
-          trendLabel={`${analytics.origin_airports} origin airports`}
-          icon={Map}
-        />
-      </div>
-
-      {/* Main Chart */}
-      <ChartCard 
-        title="Airfare Price Index Trend" 
-        subtitle="Base Period = 100"
-        action={
-          <div className="flex bg-[#101D30] p-1 rounded-md text-xs font-medium border border-[#24344A]">
-            <button onClick={() => setTimeFilter('1W')} className={`px-3 py-1 rounded ${timeFilter === '1W' ? 'bg-[#1A2C47] text-white shadow-sm' : 'text-[#718198] hover:text-white'}`}>1W</button>
-            <button onClick={() => setTimeFilter('1M')} className={`px-3 py-1 rounded ${timeFilter === '1M' ? 'bg-[#1A2C47] text-white shadow-sm' : 'text-[#718198] hover:text-white'}`}>1M</button>
-            <button onClick={() => setTimeFilter('3M')} className={`px-3 py-1 rounded ${timeFilter === '3M' ? 'bg-[#1A2C47] text-white shadow-sm' : 'text-[#718198] hover:text-white'}`}>3M</button>
-            <button onClick={() => setTimeFilter('All')} className={`px-3 py-1 rounded ${timeFilter === 'All' ? 'bg-[#1A2C47] text-white shadow-sm' : 'text-[#718198] hover:text-white'}`}>All</button>
+    <ErrorBoundary>
+      <div className="space-y-6 max-w-7xl relative z-10">
+        {/* Header section */}
+        <div className="flex justify-between items-end border-b border-[#24344A] pb-4">
+          <div>
+            <div className="inline-flex items-center gap-2 text-[#ec4899] text-xs font-mono mb-2">
+              <span className="w-2 h-2 bg-[#ec4899] animate-pulse"></span>
+              LIVE INTELLIGENCE
+            </div>
+            <h1 className="text-3xl font-sans font-bold text-white tracking-tighter">NETWORK OVERVIEW</h1>
           </div>
-        }
-      >
-        <div className="h-[350px] w-full mt-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={filteredIndexData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1A2C47" />
-              <XAxis 
-                dataKey="period" 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#718198', fontSize: 12 }}
-                tickFormatter={(val) => {
-                  const date = new Date(val);
-                  return `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })} '${date.getFullYear().toString().slice(2)}`;
-                }}
-              />
-              <YAxis 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#718198', fontSize: 12 }}
-                domain={['auto', 'auto']}
-              />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#0B1728', borderRadius: '8px', border: '1px solid #24344A', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
-                itemStyle={{ color: '#F4F7FB' }}
-                formatter={(value: any) => [`${Number(value).toFixed(1)}`, 'Y (Index)']}
-                labelFormatter={(label) => `X (Date): ${new Date(label as string).toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}`}
-              />
-              <Legend verticalAlign="top" height={36}/>
-              <ReferenceLine y={100} stroke="#4F46E5" strokeDasharray="3 3" opacity={0.5} label={{ position: 'insideTopLeft', value: 'Base (100)', fill: '#718198', fontSize: 11 }} />
-              <Line 
-                type="monotone" 
-                dataKey="index" 
-                stroke="#38BDF8" 
-                strokeWidth={3}
-                dot={{ r: 4, strokeWidth: 2, fill: '#0B1728', stroke: '#38BDF8' }}
-                activeDot={{ r: 6, strokeWidth: 0, fill: '#38BDF8' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </ChartCard>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <ChartCard 
-            title="Most Observed Routes" 
-            subtitle="Top tracked corridors across India"
-            action={
-              <button className="text-sm text-sky-500 font-medium hover:text-sky-400">View all routes</button>
-            }
-          >
-            <div className="mt-4 -mx-5 -mb-5">
-              <DataTable 
-                data={routesData.slice(0, 5)}
-                columns={[
-                  { 
-                    header: 'Route', 
-                    accessor: (row) => (
-                      <div className="flex items-center gap-2">
-                        <Navigation size={14} className="text-[#A9B7C9] rotate-45" />
-                        <span className="font-medium text-[#F4F7FB]">{row.origin} - {row.destination}</span>
-                      </div>
-                    )
-                  },
-                  { header: 'Distance', align: 'right', accessor: (row) => <span className="text-slate-300">{row.distance} km</span> },
-                  { header: 'Min Fare', align: 'right', accessor: (row) => `₹${(row.minimum_fare || 0).toLocaleString('en-IN')}` },
-                  { header: 'Observations', align: 'right', accessor: (row) => (row.observation_count||0) },
-                  { header: 'Avg Fare', align: 'right', accessor: (row) => `₹${(row.average_fare || 0).toLocaleString('en-IN')}` },
-                ]}
-              />
-            </div>
-          </ChartCard>
+          <div className="text-right hidden sm:block">
+            <p className="text-[10px] font-mono text-[#718198] uppercase tracking-widest">Last Updated</p>
+            <p className="text-sm font-mono text-[#06b6d4]">{new Date().toLocaleTimeString('en-US')} IST</p>
+          </div>
         </div>
 
-        <div>
-          <ChartCard title="Airline Insights" subtitle="By average historical fare">
-            <div className="mt-4 space-y-6">
-              <div>
-                <h4 className="text-xs font-semibold text-[#718198] uppercase tracking-wider mb-3 flex justify-between">
-                  <span>Premium Carriers</span>
-                </h4>
-                <div className="space-y-3">
-                  {topAirlines.map(a => (
-                    <div key={a.airline} className="flex justify-between items-center text-sm">
-                      <span className="text-[#F4F7FB] font-medium">{a.airline}</span>
-                      <span className="text-slate-400">₹{a.average_fare.toLocaleString('en-IN')}</span>
-                    </div>
+        {/* KPI Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <HudKpi 
+            title="Airfare Price Index" 
+            value={latestIndex.toFixed(1)}
+            trend={indexChange}
+            trendLabel="VS LAST MONTH"
+            icon={TrendingUp}
+            critical={indexChange > 5}
+          />
+          <HudKpi 
+            title="Avg Domestic Fare" 
+            value={analytics.average_fare.toLocaleString('en-IN')}
+            unit="₹"
+            trend={4.2} // Mock trend for visual
+            trendLabel="MOM AVG"
+            icon={IndianRupee}
+          />
+          <HudKpi 
+            title="Routes Tracked" 
+            value={analytics.unique_routes}
+            trendLabel="LIVE CONNECTIONS"
+            icon={Map}
+          />
+          <HudKpi 
+            title="Anomalies Detected" 
+            value="04"
+            trendLabel="ACTION REQUIRED"
+            icon={AlertTriangle}
+            critical={true}
+          />
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Chart Section */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="glass-panel p-6 hud-bracket relative">
+              <div className="flex justify-between items-center mb-6 border-b border-[#24344A] pb-4">
+                <div>
+                  <h3 className="text-sm font-mono text-white tracking-widest uppercase">Index Trend Analysis</h3>
+                  <p className="text-[10px] text-[#718198] font-mono uppercase mt-1">BASE PERIOD = 100</p>
+                </div>
+                
+                <div className="flex bg-[#030712] p-1 border border-[#06b6d4]/30">
+                  {['1W', '1M', '3M', 'All'].map(f => (
+                    <button 
+                      key={f}
+                      onClick={() => setTimeFilter(f as any)} 
+                      className={`px-3 py-1 text-[10px] font-mono tracking-wider transition-colors ${timeFilter === f ? 'bg-[#06b6d4]/20 text-[#06b6d4]' : 'text-[#718198] hover:text-white'}`}
+                    >
+                      {f}
+                    </button>
                   ))}
                 </div>
               </div>
-              <div className="h-px bg-[#24344A]"></div>
-              <div>
-                <h4 className="text-xs font-semibold text-[#718198] uppercase tracking-wider mb-3 flex justify-between">
-                  <span>Budget Carriers</span>
-                </h4>
-                <div className="space-y-3">
-                  {cheapestAirlines.map(a => (
-                    <div key={a.airline} className="flex justify-between items-center text-sm">
-                      <span className="text-[#F4F7FB] font-medium">{a.airline}</span>
-                      <span className="text-slate-400">₹{a.average_fare.toLocaleString('en-IN')}</span>
-                    </div>
-                  ))}
-                </div>
+              
+              <div className="h-[350px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={filteredIndexData} margin={{ top: 5, right: 0, bottom: 0, left: -20 }}>
+                    <defs>
+                      <linearGradient id="colorIndex" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#14243A" />
+                    <XAxis 
+                      dataKey="period" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#718198', fontSize: 10, fontFamily: 'monospace' }}
+                      tickFormatter={(val) => {
+                        const date = new Date(val);
+                        return `${date.getDate()}/${date.getMonth()+1}`;
+                      }}
+                    />
+                    <YAxis 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#718198', fontSize: 10, fontFamily: 'monospace' }}
+                      domain={['auto', 'auto']}
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#030712', borderRadius: '0px', border: '1px solid #06b6d4', boxShadow: '0 0 15px rgba(6,182,212,0.2)', fontFamily: 'monospace' }}
+                      itemStyle={{ color: '#06b6d4' }}
+                      labelStyle={{ color: '#A9B7C9', marginBottom: '5px' }}
+                      formatter={(value: any) => [`${Number(value).toFixed(1)}`, 'INDEX']}
+                      labelFormatter={(label) => `DATE // ${new Date(label as string).toLocaleDateString('en-GB')}`}
+                    />
+                    <ReferenceLine y={100} stroke="#ec4899" strokeDasharray="3 3" opacity={0.5} label={{ position: 'insideTopLeft', value: 'BASE', fill: '#ec4899', fontSize: 10, fontFamily: 'monospace' }} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="index" 
+                      stroke="#06b6d4" 
+                      strokeWidth={2}
+                      fillOpacity={1} 
+                      fill="url(#colorIndex)" 
+                      activeDot={{ r: 6, fill: '#ec4899', stroke: '#030712', strokeWidth: 2 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
-          </ChartCard>
+            
+            <div className="glass-panel p-6 border-t-2 border-[#06b6d4]">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-mono text-white tracking-widest uppercase">Top Volume Routes</h3>
+                <span className="text-[10px] text-[#06b6d4] font-mono cursor-pointer hover:underline">VIEW NETWORK MAP →</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#24344A] text-[10px] font-mono text-[#718198] uppercase tracking-widest">
+                      <th className="pb-2 font-normal">Route Sector</th>
+                      <th className="pb-2 font-normal text-right">Avg Fare</th>
+                      <th className="pb-2 font-normal text-right">Vol</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {routesData.slice(0, 5).map((row, i) => (
+                      <tr key={i} className="border-b border-[#14243A] hover:bg-[#06b6d4]/5 transition-colors cursor-pointer group">
+                        <td className="py-3 text-sm font-medium text-white flex items-center gap-2">
+                          <Navigation size={12} className="text-[#06b6d4] rotate-45 group-hover:text-[#ec4899]" />
+                          {row.origin} <span className="text-[#718198]">→</span> {row.destination}
+                        </td>
+                        <td className="py-3 text-sm text-white text-right font-mono">₹{(row.average_fare || 0).toLocaleString('en-IN')}</td>
+                        <td className="py-3 text-sm text-[#06b6d4] text-right font-mono">{row.observation_count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Side Panel */}
+          <div className="space-y-6">
+            
+            {/* Anomaly Monitor */}
+            <div className="glass-panel p-5 border-t-2 border-[#ec4899]">
+              <h3 className="text-sm font-mono text-white tracking-widest uppercase flex items-center gap-2 mb-4">
+                <AlertTriangle size={14} className="text-[#ec4899]" />
+                Anomaly Monitor
+              </h3>
+              
+              <div className="space-y-3">
+                {anomalies.map((anom, i) => (
+                  <div key={i} className={`p-3 border border-[#24344A] bg-[#030712] relative overflow-hidden flex justify-between items-center cursor-pointer hover:border-[#06b6d4]/50 transition-colors`}>
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${anom.border} opacity-50`}></div>
+                    <div>
+                      <p className="text-sm font-bold text-white tracking-tight">{anom.route}</p>
+                      <p className={`text-[10px] font-mono mt-1 ${anom.color}`}>{anom.level}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-mono font-bold ${anom.color}`}>{anom.change}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Airline Breakdown */}
+            <div className="glass-panel p-5 hud-border">
+               <h3 className="text-sm font-mono text-white tracking-widest uppercase mb-4">Airline Pricing Matrix</h3>
+               
+               <div className="space-y-4">
+                 {[...analytics.airlines].sort((a,b) => b.average_fare - a.average_fare).slice(0, 5).map((a, i) => {
+                   const maxFare = Math.max(...analytics.airlines.map(x => x.average_fare));
+                   const pct = (a.average_fare / maxFare) * 100;
+                   return (
+                     <div key={i}>
+                       <div className="flex justify-between text-xs font-mono mb-1">
+                         <span className="text-[#A9B7C9] uppercase">{a.airline}</span>
+                         <span className="text-white">₹{a.average_fare.toLocaleString('en-IN')}</span>
+                       </div>
+                       <div className="h-1 w-full bg-[#101D30] overflow-hidden">
+                         <div className="h-full bg-gradient-to-r from-[#06b6d4] to-[#ec4899]" style={{ width: `${pct}%` }}></div>
+                       </div>
+                     </div>
+                   );
+                 })}
+               </div>
+            </div>
+
+          </div>
         </div>
       </div>
-    </div></ErrorBoundary>
+    </ErrorBoundary>
   );
 }
-

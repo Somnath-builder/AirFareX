@@ -1,206 +1,154 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
-} from 'recharts';
-import { Clock, TrendingUp, AlertCircle, Calendar } from 'lucide-react';
-import { ChartCard } from '../components/ui/Cards';
-import { DataTable } from '../components/ui/DataTable';
+﻿import React, { useEffect, useState } from 'react';
+import { Clock, Loader2, AlertTriangle, Terminal } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, AreaChart, Area, Legend } from 'recharts';
 import { airfareService } from '../services/airfareService';
 import type { LeadTimeResponse } from '../types';
 
 export function LeadTimeAnalysis() {
+  const [data, setData] = useState<LeadTimeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<LeadTimeResponse | null>(null);
-  
-  // Filters
-  const [routeFilter, setRouteFilter] = useState<string>('');
-  const [airlineFilter, setAirlineFilter] = useState<string>('');
 
   useEffect(() => {
-    const fetchLeadTimeData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await airfareService.getLeadTimeAnalysis({
-          route: routeFilter || undefined,
-          airline: airlineFilter || undefined,
-        });
-        setData(response);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch lead time analysis data');
-      } finally {
+    airfareService.getLeadTimeAnalysis()
+      .then(res => {
+        setData(res);
         setLoading(false);
-      }
-    };
+      })
+      .catch(err => {
+        console.error(err);
+        setError("Failed to fetch lead time telemetry.");
+        setLoading(false);
+      });
+  }, []);
 
-    fetchLeadTimeData();
-  }, [routeFilter, airlineFilter]);
-
-  // Re-sort the daily curve so it counts down from 45 to 0 (right-to-left effect on standard XAxis)
-  // Actually, we'll sort ascending and use reversed={true} on XAxis
-  const chartData = useMemo(() => {
-    if (!data) return [];
-    return [...data.curve].sort((a, b) => a.days_before_departure - b.days_before_departure);
-  }, [data]);
-
-  if (loading && !data) {
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
-        <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[#718198] animate-pulse">Computing pricing curves...</p>
+      <div className="h-[60vh] flex flex-col items-center justify-center font-mono text-[#06b6d4]">
+        <Terminal size={32} className="animate-pulse mb-4 opacity-50" />
+        <p className="tracking-widest animate-pulse uppercase">CALCULATING BOOKING HORIZON...</p>
       </div>
     );
   }
 
-  if (error && !data) {
+  if (error || !data) {
     return (
-      <div className="p-8 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-4 text-red-400">
-        <AlertCircle size={24} />
-        <p>{error}</p>
+      <div className="p-8 border border-[#ec4899] bg-[#030712] max-w-2xl mx-auto mt-20 relative">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-[#ec4899] shadow-[0_0_10px_#ec4899]"></div>
+        <h2 className="text-xl font-bold font-mono text-white tracking-tighter uppercase">Telemetry Error</h2>
+        <p className="text-[#A9B7C9] mt-2 font-mono text-sm">{error || "No data available."}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Lead Time Analysis</h1>
-        <p className="text-[#718198] mt-1">Discover how the booking window impacts fare pricing across airlines.</p>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <select 
-          className="bg-[#0B1728] border border-[#24344A] text-[#F4F7FB] px-4 py-2 rounded-lg focus:ring-2 focus:ring-sky-500/50 outline-none"
-          value={routeFilter}
-          onChange={(e) => setRouteFilter(e.target.value)}
-        >
-          <option value="">All Routes</option>
-          {data?.available_routes.map(r => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-        
-        <select 
-          className="bg-[#0B1728] border border-[#24344A] text-[#F4F7FB] px-4 py-2 rounded-lg focus:ring-2 focus:ring-sky-500/50 outline-none"
-          value={airlineFilter}
-          onChange={(e) => setAirlineFilter(e.target.value)}
-        >
-          <option value="">All Airlines</option>
-          {data?.available_airlines.map(a => (
-            <option key={a} value={a}>{a}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Main Curve Chart */}
-      <ChartCard title="Pricing Curve by Days to Departure" subtitle="Average fares plotted against advance booking days">
-        <div className="h-[400px] w-full mt-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1A2C47" />
-              <XAxis 
-                dataKey="days_before_departure" 
-                reversed={true} 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#718198', fontSize: 12 }}
-                label={{ value: "Days to Departure", position: 'insideBottom', offset: -10, fill: '#718198' }}
-              />
-              <YAxis 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#718198', fontSize: 12 }}
-                tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`}
-              />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#0B1728', borderRadius: '8px', border: '1px solid #24344A', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
-                itemStyle={{ color: '#F4F7FB' }}
-                labelFormatter={(label) => `T-${label} Days`}
-                formatter={((value: any, name?: any) => [`₹${Number(value).toLocaleString('en-IN')}`, String(name ?? '')]) as any}
-              />
-              <Legend verticalAlign="top" height={36}/>
-              <Line 
-                type="monotone" 
-                dataKey="average_fare" 
-                name="Average Fare"
-                stroke="#38BDF8" 
-                strokeWidth={3}
-                dot={false}
-                activeDot={{ r: 6, fill: '#38BDF8', strokeWidth: 0 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="median_fare" 
-                name="Median Fare"
-                stroke="#8B5CF6" 
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+    <div className="max-w-7xl mx-auto space-y-6 relative z-10 pb-12">
+      {/* Header */}
+      <div className="border-b border-[#24344A] pb-4">
+        <div className="inline-flex items-center gap-2 text-[#06b6d4] text-[10px] font-mono tracking-widest uppercase mb-2">
+          <Clock size={14} className="opacity-70" />
+          Temporal Analytics
         </div>
-      </ChartCard>
+        <h1 className="text-3xl font-sans font-bold text-white tracking-tighter uppercase">Booking Horizon</h1>
+        <p className="text-[#A9B7C9] font-mono text-xs mt-2">Fare dynamics relative to departure proximity.</p>
+      </div>
 
-      {/* Grid for Bottom Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Booking Windows */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium text-slate-200 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-sky-400" />
-            Macro Booking Windows
+        {/* Main Curve Chart */}
+        <div className="lg:col-span-2 glass-panel p-6 hud-border flex flex-col">
+          <h3 className="text-sm font-mono text-white tracking-widest uppercase mb-6 flex justify-between">
+            <span>Lead Time Curve</span>
+            <span className="text-[10px] text-[#718198] bg-[#030712] border border-[#24344A] px-2 py-1">X: Days Before Departure</span>
           </h3>
-          <div className="grid grid-cols-1 gap-4">
-            {data?.windows.map(w => (
-              <div key={w.key} className="bg-[#0B1728] border border-[#24344A] p-4 rounded-xl flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[#718198] font-medium mb-1">{w.label}</p>
-                  <p className="text-2xl font-light text-[#F4F7FB]">₹{w.average_fare.toLocaleString('en-IN')}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-[#718198]">Observations</p>
-                  <p className="text-sm font-medium text-[#A9B7C9]">{w.observations}</p>
-                </div>
-              </div>
-            ))}
+          
+          <div className="flex-1 w-full min-h-[350px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data.curve} margin={{ top: 10, right: 0, bottom: 0, left: -20 }}>
+                <defs>
+                  <linearGradient id="colorFare" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#14243A" />
+                <XAxis 
+                  dataKey="days_before_departure" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#718198', fontSize: 10, fontFamily: 'monospace' }} 
+                  reversed={true} // Usually want X axis to show days counting down to 0
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#718198', fontSize: 10, fontFamily: 'monospace' }} 
+                  domain={[0, 'auto']}
+                  tickFormatter={(val) => `₹${val}`}
+                />
+                <Legend wrapperStyle={{ fontSize: '10px', fontFamily: 'monospace', paddingTop: '10px' }} />
+                  <Tooltip 
+                  contentStyle={{ backgroundColor: '#030712', borderRadius: '0', border: '1px solid #06b6d4', fontFamily: 'monospace' }}
+                  itemStyle={{ color: '#06b6d4' }}
+                  labelStyle={{ color: '#A9B7C9' }}
+                  labelFormatter={(label) => `T MINUS ${label} DAYS`}
+                  formatter={(value: any, name: any) => [`₹${Number(value).toLocaleString()}`, String(name).toUpperCase()]}
+                />
+                <ReferenceLine x={7} stroke="#ec4899" strokeDasharray="3 3" label={{ value: 'CRITICAL WINDOW (7D)', position: 'insideTop', fill: '#ec4899', fontSize: 10, fontFamily: 'monospace' }} />
+                <Area 
+                  type="monotone" 
+                  dataKey="average_fare" 
+                  name="Average Fare"
+                  stroke="#06b6d4" 
+                  strokeWidth={2}
+                  fillOpacity={1} 
+                  fill="url(#colorFare)" 
+                  activeDot={{ r: 6, fill: '#06b6d4', stroke: '#030712', strokeWidth: 2 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="median_fare" 
+                  name="Median Fare"
+                  stroke="#ec4899" 
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 6, fill: '#ec4899', stroke: '#030712', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Carrier Surge Comparison */}
-        <div>
-          <h3 className="text-lg font-medium text-slate-200 flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-sky-400" />
-            Carrier Last-Minute Surge
-          </h3>
-          <div className="bg-[#0B1728] border border-[#24344A] rounded-xl overflow-hidden">
-            <DataTable 
-              data={data?.carrier_comparison || []}
-              columns={[
-                { header: 'Airline', accessor: 'airline' },
-                { 
-                  header: 'Advance Fare (14d+)', 
-                  align: 'right', 
-                  accessor: (row) => row.advance_avg_fare ? `₹${Math.round(row.advance_avg_fare).toLocaleString('en-IN')}` : <span className="text-slate-500">N/A</span>
-                },
-                { 
-                  header: '0-1 Day Fare', 
-                  align: 'right', 
-                  accessor: (row) => row.last_minute_avg_fare ? <span className="text-emerald-400">₹{Math.round(row.last_minute_avg_fare).toLocaleString('en-IN')}</span> : <span className="text-slate-500">N/A</span>
-                },
-                { 
-                  header: 'Surge', 
-                  align: 'right', 
-                  accessor: (row) => (
-                    <span className={row.surge_percentage && row.surge_percentage > 50 ? 'text-red-400 font-medium' : 'text-slate-300'}>
-                      {row.surge_percentage ? `+${row.surge_percentage}%` : 'N/A'}
-                    </span>
-                  )
-                },
-              ]}
-            />
+        {/* Windows sidebar */}
+        <div className="space-y-6">
+          <div className="glass-panel p-6 border-t-2 border-[#ec4899]">
+            <h3 className="text-sm font-mono text-white tracking-widest uppercase mb-4 flex items-center gap-2">
+              <AlertTriangle size={14} className="text-[#ec4899]" />
+              AI Advisory
+            </h3>
+            <p className="text-xs font-mono text-[#A9B7C9] leading-relaxed">
+              Based on network topography, the optimal booking vector is typically <strong className="text-[#06b6d4]">14-21 days</strong> prior to departure. Fares experience a <strong className="text-[#ec4899]">surge within 7 days</strong> of departure due to inventory scarcity and inelastic demand parameters.
+            </p>
+          </div>
+
+          <div className="glass-panel p-6 hud-bracket">
+            <h3 className="text-sm font-mono text-white tracking-widest uppercase mb-4">Window Averages</h3>
+            <div className="space-y-3">
+              {data.windows.map((w, i) => (
+                <div key={i} className="flex justify-between items-center p-3 border border-[#24344A] bg-[#030712] relative overflow-hidden group">
+                  <div className={`absolute top-0 left-0 w-1 h-full ${i === 0 ? 'bg-[#ec4899]' : i === 1 ? 'bg-orange-500' : 'bg-emerald-500'}`}></div>
+                  <div className="pl-2">
+                    <p className="text-xs font-mono font-bold text-white tracking-wider">{w.label}</p>
+                    <p className="text-[10px] font-mono text-[#718198] uppercase tracking-widest mt-0.5">{w.observations} pings</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-mono font-bold ${i === 0 ? 'text-[#ec4899]' : i === 1 ? 'text-orange-400' : 'text-emerald-400'}`}>
+                      ₹{(w.average_fare || 0).toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         

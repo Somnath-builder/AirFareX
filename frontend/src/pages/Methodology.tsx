@@ -1,104 +1,73 @@
-import { Server, Database, LineChart, Globe, Terminal } from 'lucide-react';
-import { Card } from '../components/ui/Cards';
+﻿import React from 'react';
+import { BookOpen, ShieldAlert, Cpu, TerminalSquare } from 'lucide-react';
 
 export function Methodology() {
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white tracking-tight">System Methodology</h1>
-        <p className="text-[#718198] mt-2 text-lg">Architecture and mathematical foundation of the India Airfare Price Index.</p>
+    <div className="max-w-4xl mx-auto space-y-8 relative z-10 pb-12">
+      {/* Header */}
+      <div className="border-b border-[#24344A] pb-4">
+        <div className="inline-flex items-center gap-2 text-[#ec4899] text-[10px] font-mono tracking-widest uppercase mb-2">
+          <ShieldAlert size={14} />
+          Confidential
+        </div>
+        <h1 className="text-3xl font-sans font-bold text-white tracking-tighter uppercase">System Operations Manual</h1>
+        <p className="text-[#A9B7C9] font-mono text-xs mt-2">Architecture and data processing methodology for AirFareX.</p>
       </div>
 
-      <div className="prose prose-slate max-w-none">
-        <h2 className="text-xl font-semibold text-white flex items-center gap-2 pb-2 border-b border-[#24344A] mt-8 mb-4">
-          <Globe className="text-indigo-500" />
-          1. Data Collection
-        </h2>
-        <p className="text-slate-600 leading-relaxed mb-4">
-          The proposed system employs automated web scraping to collect real-time airfare observations from major Indian airline portals and select Online Travel Aggregators (OTAs). 
-          The data is scraped without manual intervention at scheduled intervals to capture dynamic pricing strategies.
-        </p>
+      <div className="glass-panel p-8 hud-border relative overflow-hidden">
+        {/* Background grid */}
+        <div className="absolute inset-0 pointer-events-none opacity-5" style={{ 
+          backgroundImage: 'linear-gradient(#06b6d4 1px, transparent 1px), linear-gradient(90deg, #06b6d4 1px, transparent 1px)',
+          backgroundSize: '20px 20px'
+        }}></div>
 
-        <h3 className="text-sm font-semibold text-[#F4F7FB] uppercase tracking-wider mb-2 mt-6">Route Basket</h3>
-        <p className="text-slate-600 leading-relaxed mb-4">
-          A representative basket of city-pairs is selected based on DGCA passenger traffic data. This ensures the index accurately reflects the prices paid by the majority of domestic flyers.
-        </p>
+        <div className="relative z-10 space-y-8 text-sm font-mono leading-relaxed text-[#A9B7C9]">
+          
+          <section className="space-y-4">
+            <h2 className="text-lg font-bold text-white uppercase tracking-widest flex items-center gap-3 border-b border-[#24344A] pb-2">
+              <Cpu className="text-[#06b6d4]" size={18} />
+              1.0 Data Ingestion Vector
+            </h2>
+            <p>
+              The system utilizes a continuous data collection pipeline. Telemetry is sourced directly from <span className="text-[#06b6d4]">Google Flights via the SerpApi datalink</span>.
+            </p>
+            <ul className="space-y-2 pl-4 border-l border-[#06b6d4]/30">
+              <li><strong className="text-white">Chronology:</strong> Automated scrapers execute at randomized intervals.</li>
+              <li><strong className="text-white">Topology:</strong> Coverage includes the top 100 domestic aviation corridors in India.</li>
+              <li><strong className="text-white">Lead Time Matrix:</strong> Fares are captured at T-minus 1, 3, 7, 14, 21, and 30 days.</li>
+            </ul>
+          </section>
 
-        <h3 className="text-sm font-semibold text-[#F4F7FB] uppercase tracking-wider mb-2 mt-6">Booking Windows</h3>
-        <p className="text-slate-600 leading-relaxed mb-4">
-          To account for lead-time elasticity, fares are sampled at specific intervals prior to departure:
-        </p>
-        <div className="flex gap-2 mb-6">
-          {['T+1', 'T+3', 'T+7', 'T+15', 'T+30', 'T+45'].map(t => (
-            <span key={t} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-md font-mono text-sm">{t}</span>
-          ))}
-        </div>
+          <section className="space-y-4">
+            <h2 className="text-lg font-bold text-white uppercase tracking-widest flex items-center gap-3 border-b border-[#24344A] pb-2">
+              <TerminalSquare className="text-[#ec4899]" size={18} />
+              2.0 Price Index Calculation
+            </h2>
+            <p>
+              The National Airfare Price Index normalizes complex network topography into a single macroeconomic indicator.
+            </p>
+            <div className="bg-[#030712] border border-[#24344A] p-4 text-xs text-[#06b6d4]">
+              <code>INDEX_t = (Σ (Price_i,t × Weight_i)) / (Σ (Price_i,0 × Weight_i)) × 100</code>
+            </div>
+            <p>
+              Where <code className="text-white bg-[#101D30] px-1">Base Period (0)</code> is defined as the first month of system operation. Route weights are proportional to their passenger volume density.
+            </p>
+          </section>
 
-        <h2 className="text-xl font-semibold text-white flex items-center gap-2 pb-2 border-b border-[#24344A] mt-10 mb-4">
-          <Database className="text-indigo-500" />
-          2. Data Processing Pipeline
-        </h2>
-        <div className="bg-black rounded-xl p-6 border border-[#24344A] my-4">
-          <div className="flex flex-col gap-4">
-            {['Raw Fare Collection', 'Validation & Cleansing', 'Deduplication', 'Outlier Detection', 'Fare Normalisation'].map((step, idx) => (
-              <div key={idx} className="flex flex-col items-center">
-                <div className="w-full max-w-md bg-[#101D30] border border-[#24344A] p-3 rounded-lg text-center font-medium text-[#F4F7FB] shadow-sm">
-                  {step}
-                </div>
-                {idx < 4 && <div className="h-6 w-px bg-slate-300 my-1"></div>}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <h2 className="text-xl font-semibold text-white flex items-center gap-2 pb-2 border-b border-[#24344A] mt-10 mb-4">
-          <LineChart className="text-indigo-500" />
-          3. Index Construction
-        </h2>
-        <p className="text-slate-600 leading-relaxed mb-4">
-          The index utilizes a Laspeyres-type formula, where current period prices are compared against a fixed base period. 
-          Route-level price relatives are aggregated using fixed weights derived from passenger volume share.
-        </p>
-        <div className="bg-slate-900 rounded-xl p-6 my-4 overflow-x-auto">
-          <code className="text-emerald-400 font-mono text-sm whitespace-pre">
-            {`I(t) = Σ (P_i,t / P_i,0) * W_i * 100`}
-            <br/><br/>
-            {`Where:`}
-            <br/>
-            {`I(t)   = Index at time t`}
-            <br/>
-            {`P_i,t  = Price for route i at time t`}
-            <br/>
-            {`P_i,0  = Price for route i in base period 0`}
-            <br/>
-            {`W_i    = Weight for route i (Σ W_i = 1)`}
-          </code>
-        </div>
-
-        <h2 className="text-xl font-semibold text-white flex items-center gap-2 pb-2 border-b border-[#24344A] mt-10 mb-4">
-          <Server className="text-indigo-500" />
-          4. Future API Specification
-        </h2>
-        <p className="text-slate-600 leading-relaxed mb-4">
-          When the backend is implemented, this frontend will decouple from the mock data layer and consume the following RESTful endpoints:
-        </p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
-          {[
-            { method: 'GET', endpoint: '/api/v1/index' },
-            { method: 'GET', endpoint: '/api/v1/routes' },
-            { method: 'GET', endpoint: '/api/v1/routes/{id}' },
-            { method: 'GET', endpoint: '/api/v1/airlines' },
-            { method: 'GET', endpoint: '/api/v1/observations' },
-            { method: 'GET', endpoint: '/api/v1/lead-time' },
-          ].map(api => (
-            <Card key={api.endpoint} className="p-4 flex items-center gap-3">
-              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                {api.method}
-              </span>
-              <code className="text-sm text-[#F4F7FB]">{api.endpoint}</code>
-            </Card>
-          ))}
+          <section className="space-y-4">
+            <h2 className="text-lg font-bold text-white uppercase tracking-widest flex items-center gap-3 border-b border-[#24344A] pb-2">
+              <BookOpen className="text-emerald-500" size={18} />
+              3.0 Machine Learning Subsystem
+            </h2>
+            <p>
+              The Booking Window Intelligence feature employs a <strong className="text-white">Random Forest Classifier</strong> trained on historical network data.
+            </p>
+            <ul className="space-y-2 pl-4 border-l border-emerald-500/30">
+              <li>It analyzes departure proximity, route density, and carrier monopolies.</li>
+              <li>Generates a probabilistic risk assessment of short-term fare surges.</li>
+              <li>Requires a minimum threshold of 15 observations per route sector to achieve statistical reliability.</li>
+            </ul>
+          </section>
         </div>
       </div>
     </div>
