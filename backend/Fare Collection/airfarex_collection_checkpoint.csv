@@ -49,3 +49,54 @@ AMD,HSS,2026-09-10,NO_FARE_FOUND,2026-09-09T14:47:51.436422+00:00,Google Flights
 AMD,IXB,2026-09-10,FARES_FOUND,2026-09-09T14:48:03.167582+00:00,9 fare observations
 AMD,IXK,2026-09-10,NO_FARE_FOUND,2026-09-09T14:48:08.477514+00:00,Google Flights hasn't returned any results for this query.
 AMD,JGA,2026-09-10,FARES_FOUND,2026-09-09T14:48:15.327710+00:00,6 fare observations
+AGX,GOX,2026-09-10,NO_FARE_FOUND,2026-09-11T03:26:19.434793+00:00,Google Flights hasn't returned any results for this query.
+AMD,BLR,2026-09-10,NO_FARE_FOUND,2026-09-11T03:26:23.849339+00:00,Google Flights hasn't returned any results for this query.
+AMD,BOM,2026-09-10,NO_FARE_FOUND,2026-09-11T03:26:28.135703+00:00,Google Flights hasn't returned any results for this query.
+AMD,CCU,2026-09-10,NO_FARE_FOUND,2026-09-11T03:26:33.484679+00:00,Google Flights hasn't returned any results for this query.
+AMD,DEL,2026-09-10,NO_FARE_FOUND,2026-09-11T03:26:38.028423+00:00,Google Flights hasn't returned any results for this query.
+AMD,DIU,2026-09-10,NO_FARE_FOUND,2026-09-11T03:26:42.674892+00:00,Google Flights hasn't returned any results for this query.
+AMD,HSS,2026-09-10,NO_FARE_FOUND,2026-09-11T03:26:47.768054+00:00,Google Flights hasn't returned any results for this query.
+AMD,IXB,2026-09-10,NO_FARE_FOUND,2026-09-11T03:26:53.523082+00:00,Google Flights hasn't returned any results for this query.
+AMD,IXK,2026-09-10,NO_FARE_FOUND,2026-09-11T03:26:58.763734+00:00,Google Flights hasn't returned any results for this query.
+AMD,JGA,2026-09-10,NO_FARE_FOUND,2026-09-11T03:27:03.357330+00:00,Google Flights hasn't returned any results for this query.
+AMD,JLG,2026-09-10,NO_FARE_FOUND,2026-09-11T03:27:34.081424+00:00,Google Flights hasn't returned any results for this query.
+AMD,MAA,2026-09-10,NO_FARE_FOUND,2026-09-11T03:27:39.290651+00:00,Google Flights hasn't returned any results for this query.
+AMD,NDC,2026-09-10,NO_FARE_FOUND,2026-09-11T03:27:43.470256+00:00,Google Flights hasn't returned any results for this query.
+AMD,PNQ,2026-09-10,NO_FARE_FOUND,2026-09-11T03:27:48.543435+00:00,Google Flights hasn't returned any results for this query.
+AMD,PXN,2026-09-10,NO_FARE_FOUND,2026-09-11T03:27:53.302136+00:00,Google Flights hasn't returned any results for this query.
+BLR,AMD,2026-09-10,NO_FARE_FOUND,2026-09-11T03:27:58.932169+00:00,Google Flights hasn't returned any results for this query.
+BLR,BOM,2026-09-10,NO_FARE_FOUND,2026-09-11T03:28:08.663467+00:00,Google Flights hasn't returned any results for this query.
+BLR,DEL,2026-09-10,NO_FARE_FOUND,2026-09-11T03:28:18.283439+00:00,Google Flights hasn't returned any results for this query.
+BLR,GOX,2026-09-10,NO_FARE_FOUND,2026-09-11T03:28:28.215937+00:00,Google Flights hasn't returned any results for this query.
+BLR,HYD,2026-09-10,NO_FARE_FOUND,2026-09-11T03:28:33.131739+00:00,Google Flights hasn't returned any results for this query.
+BLR,IXA,2026-09-10,NO_FARE_FOUND,2026-09-11T03:29:18.601244+00:00,Google Flights hasn't returned any results for this query.
+BLR,IXX,2026-09-10,NO_FARE_FOUND,2026-09-11T03:29:23.517286+00:00,Google Flights hasn't returned any results for this query.
+BLR,NDC,2026-09-10,NO_FARE_FOUND,2026-09-11T03:29:28.127455+00:00,Google Flights hasn't returned any results for this query.
+BLR,SDW,2026-09-10,NO_FARE_FOUND,2026-09-11T03:29:32.834920+00:00,Google Flights hasn't returned any results for this query.
+BLR,VDY,2026-09-10,NO_FARE_FOUND,2026-09-11T03:29:47.963113+00:00,Google Flights hasn't returned any results for this query.
+BOM,AMD,2026-09-10,NO_FARE_FOUND,2026-09-11T03:29:52.902288+00:00,Google Flights hasn't returned any results for this query.
+BOM,BLR,2026-09-10,NO_FARE_FOUND,2026-09-11T03:29:57.514432+00:00,Google Flights hasn't returned any results for this query.
+CCU,AMD,2026-09-10,NO_FARE_FOUND,2026-09-11T03:30:06.152450+00:00,Google Flights hasn't returned any results for this query.
+CCU,COH,2026-09-10,NO_FARE_FOUND,2026-09-11T03:30:20.449534+00:00,Google Flights hasn't returned any results for this query.
+CCU,IXA,2026-09-10,NO_FARE_FOUND,2026-09-11T03:30:24.725119+00:00,Google Flights hasn't returned any results for this query.
+AGX,GOX,2026-09-12,NO_FARE_FOUND,2026-09-11T03:33:28.251320+00:00,Google Flights returned no fare observations.
+AJL,GAU,2026-09-12,FARES_FOUND,2026-09-11T03:34:55.572833+00:00,1 fare observations
+AJL,IMF,2026-09-12,NO_FARE_FOUND,2026-09-11T03:35:15.464705+00:00,Google Flights returned no fare observations.
+AMD,BLR,2026-09-12,FARES_FOUND,2026-09-11T03:35:20.475559+00:00,11 fare observations
+AMD,BOM,2026-09-12,FARES_FOUND,2026-09-11T03:35:30.308188+00:00,16 fare observations
+AMD,CCU,2026-09-12,FARES_FOUND,2026-09-11T03:35:39.828102+00:00,9 fare observations
+AMD,DEL,2026-09-12,FARES_FOUND,2026-09-11T03:35:44.547301+00:00,20 fare observations
+AMD,IXB,2026-09-12,FARES_FOUND,2026-09-11T03:35:52.092547+00:00,10 fare observations
+AMD,IXK,2026-09-12,NO_FARE_FOUND,2026-09-11T03:36:05.331335+00:00,Google Flights returned no fare observations.
+AMD,JLG,2026-09-12,FARES_FOUND,2026-09-11T03:36:10.222902+00:00,1 fare observations
+AMD,MAA,2026-09-12,FARES_FOUND,2026-09-11T03:36:15.617639+00:00,12 fare observations
+AMD,NDC,2026-09-12,NO_FARE_FOUND,2026-09-11T03:37:45.585333+00:00,Google Flights hasn't returned any results for this query.
+AMD,PNQ,2026-09-12,FARES_FOUND,2026-09-11T03:37:53.161292+00:00,8 fare observations
+AMD,PXN,2026-09-12,FARES_FOUND,2026-09-11T03:38:00.921760+00:00,3 fare observations
+BLR,AMD,2026-09-12,FARES_FOUND,2026-09-11T03:38:10.868092+00:00,10 fare observations
+BLR,BOM,2026-09-12,FARES_FOUND,2026-09-11T03:38:15.896389+00:00,35 fare observations
+BLR,DEL,2026-09-12,FARES_FOUND,2026-09-11T03:38:20.811482+00:00,40 fare observations
+BLR,GOX,2026-09-12,FARES_FOUND,2026-09-11T03:38:28.125810+00:00,9 fare observations
+BLR,HYD,2026-09-12,FARES_FOUND,2026-09-11T03:38:38.306247+00:00,19 fare observations
+BLR,IXA,2026-09-12,FARES_FOUND,2026-09-11T03:38:45.875609+00:00,4 fare observations
+BLR,IXX,2026-09-12,FARES_FOUND,2026-09-11T03:38:52.626278+00:00,1 fare observations

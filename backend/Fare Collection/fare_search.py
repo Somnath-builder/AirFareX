@@ -75,7 +75,7 @@ SERPAPI_URL = "https://serpapi.com/search.json"
 # IMPORTANT:
 # Keep this at 10 while testing.
 # Once everything is confirmed, increase gradually.
-MAX_SEARCHES = 10
+MAX_SEARCHES = int(os.getenv("MAX_SEARCHES", "10"))
 
 # Resume previously completed searches.
 RESUME_MODE = True

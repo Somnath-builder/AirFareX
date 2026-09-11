@@ -1,4 +1,4 @@
-﻿# AirFareX - Real-time Airfare Price Index for India
+# AirFareX - Real-time Airfare Price Index for India
 
 **AirFareX** is a sophisticated, full-stack data platform developed for **MoSPI Hackathon Problem Statement 26056**. It serves as an automated economic data platform designed to scrape, monitor, and analyze domestic airfare movements across major Indian corridors, ultimately supporting the augmentation of the Consumer Price Index (CPI).
 
@@ -82,6 +82,31 @@ The frontend serves the interactive data dashboard and connects to the backend A
    `
 
 4. **View the App**: Open your browser and navigate to http://localhost:5173.
+
+---
+
+### 3. Automated Daily Data Pipeline
+
+To collect fresh airfares, update observations, and recompute the price index in one command:
+
+```bash
+cd AirFareX/backend
+source .venv/bin/activate
+
+# Run complete pipeline (Queue -> SerpApi Scraper -> Price Index):
+python run_daily_pipeline.py
+
+# Optional: customize search count or skip steps
+python run_daily_pipeline.py --max-searches 20
+python run_daily_pipeline.py --skip-scrape    # Recompute index only
+```
+
+#### Automating with Cron (Nightly at 2:00 AM IST)
+```bash
+crontab -e
+# Add the following line:
+0 2 * * * /Users/nilankurlaskar/Desktop/AirFareX/backend/.venv/bin/python /Users/nilankurlaskar/Desktop/AirFareX/backend/run_daily_pipeline.py >> /Users/nilankurlaskar/Desktop/AirFareX/backend/daily_pipeline.log 2>&1
+```
 
 ---
 
