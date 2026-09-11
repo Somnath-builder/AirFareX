@@ -1069,3 +1069,50 @@ def get_booking_prediction(origin: str, destination: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# AIRFAREX INTELLIGENCE COPILOT (CHATBOT API)
+# ============================================================
+
+from Backend.chatbot import (
+    ChatRequest,
+    ChatResponse,
+    ResetRequest,
+    ResetResponse,
+    ConversationHistoryResponse,
+    ChatHealthResponse,
+    ChatService,
+)
+
+chat_service = ChatService(db=db)
+
+@app.post("/api/chat", response_model=ChatResponse)
+def chat_with_copilot(request: ChatRequest):
+    """
+    AirFareX Intelligence Copilot Endpoint:
+    Natural language interface for flight search, price index inquiries,
+    booking recommendations, route statistics, and fare comparisons.
+    """
+    try:
+        return chat_service.process_chat_message(request)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Chat processing error: {str(exc)}"
+        )
+
+@app.post("/api/chat/reset", response_model=ResetResponse)
+def reset_chat_conversation(request: ResetRequest):
+    """Reset a conversation session and clear its context."""
+    return chat_service.reset_conversation(request.conversation_id)
+
+@app.get("/api/chat/history/{conversation_id}", response_model=ConversationHistoryResponse)
+def get_chat_history(conversation_id: str):
+    """Retrieve full message history for a conversation ID."""
+    return chat_service.get_conversation_history(conversation_id)
+
+@app.get("/api/chat/health", response_model=ChatHealthResponse)
+def get_chat_health():
+    """Health check for the AirFareX Intelligence Copilot."""
+    return chat_service.health_check()
