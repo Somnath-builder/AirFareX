@@ -31,7 +31,7 @@ const navItems = [
   { name: 'Live Search', path: '/dashboard/search', icon: Search, id: '02' },
   { name: 'Route Intel', path: '/dashboard/routes', icon: Map, id: '03' },
   { name: 'Airfare Index', path: '/dashboard/index', icon: TrendingUp, id: '04' },
-  { name: 'Booking Window', path: '/dashboard/lead-time', icon: Clock, id: '05' },
+  { name: 'Lead Time Analytics', path: '/dashboard/lead-time', icon: Clock, id: '05' },
   { name: 'Airlines', path: '/dashboard/airlines', icon: Plane, id: '06' },
   { name: 'Data Explorer', path: '/dashboard/explorer', icon: Database, id: '07' },
   { name: 'Methodology', path: '/dashboard/methodology', icon: BookOpen, id: '08' },
