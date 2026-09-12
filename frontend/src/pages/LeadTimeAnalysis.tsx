@@ -6,11 +6,27 @@ import type { LeadTimeResponse } from '../types';
 
 export function LeadTimeAnalysis() {
   const [data, setData] = useState<LeadTimeResponse | null>(null);
+  const [routes, setRoutes] = useState<string[]>([]);
+  const [selectedRoute, setSelectedRoute] = useState<string>('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch available routes on mount
   useEffect(() => {
-    airfareService.getLeadTimeAnalysis()
+    airfareService.getRoutes()
+      .then(res => {
+        const routeStrings = res.routes.map(r => `${r.origin}-${r.destination}`);
+        setRoutes(routeStrings);
+      })
+      .catch(err => console.error("Failed to fetch routes", err));
+  }, []);
+
+  // Fetch lead time data when selectedRoute changes
+  useEffect(() => {
+    setLoading(true);
+    const params = selectedRoute !== 'ALL' ? { route: selectedRoute } : undefined;
+    
+    airfareService.getLeadTimeAnalysis(params)
       .then(res => {
         setData(res);
         setLoading(false);
@@ -20,7 +36,7 @@ export function LeadTimeAnalysis() {
         setError("Failed to fetch lead time telemetry.");
         setLoading(false);
       });
-  }, []);
+  }, [selectedRoute]);
 
   if (loading) {
     return (
@@ -44,13 +60,29 @@ export function LeadTimeAnalysis() {
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative z-10 pb-12">
       {/* Header */}
-      <div className="border-b border-[#24344A] pb-4">
-        <div className="inline-flex items-center gap-2 text-[#06b6d4] text-[10px] font-mono tracking-widest uppercase mb-2">
-          <Clock size={14} className="opacity-70" />
-          Temporal Analytics
+      <div className="border-b border-[#24344A] pb-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 text-[#06b6d4] text-[10px] font-mono tracking-widest uppercase mb-2">
+            <Clock size={14} className="opacity-70" />
+            Temporal Analytics
+          </div>
+          <h1 className="text-3xl font-sans font-bold text-white tracking-tighter uppercase">Booking Horizon</h1>
+          <p className="text-[#A9B7C9] font-mono text-xs mt-2">Fare dynamics relative to departure proximity.</p>
         </div>
-        <h1 className="text-3xl font-sans font-bold text-white tracking-tighter uppercase">Booking Horizon</h1>
-        <p className="text-[#A9B7C9] font-mono text-xs mt-2">Fare dynamics relative to departure proximity.</p>
+        
+        <div className="flex items-center gap-2">
+          <label className="text-[10px] font-mono text-[#718198] tracking-widest uppercase">Select Route:</label>
+          <select 
+            value={selectedRoute} 
+            onChange={(e) => setSelectedRoute(e.target.value)}
+            className="bg-[#030712] border border-[#24344A] text-[#06b6d4] text-xs font-mono py-1.5 px-3 focus:outline-none focus:border-[#06b6d4]"
+          >
+            <option value="ALL">AGGREGATE (ALL ROUTES)</option>
+            {routes.map(r => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
